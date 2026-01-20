@@ -23,7 +23,7 @@ public class AuthController {
         
         try {
             return authService.login(email, password)
-                    .map(user -> ResponseEntity.ok(user))
+                    .<ResponseEntity<?>>map(user -> ResponseEntity.ok(user))
                     .orElse(ResponseEntity.status(401).body("Identifiants incorrects"));
         } catch (Exception e) {
             return ResponseEntity.status(403).body(e.getMessage());
