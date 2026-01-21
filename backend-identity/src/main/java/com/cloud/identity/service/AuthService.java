@@ -1,6 +1,6 @@
 package com.cloud.identity.service;
 
-import com.cloud.identity.model.Utilisateur;
+import com.cloud.identity.entities.Utilisateur;
 import com.cloud.identity.repository.UtilisateurRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

@@ -1,6 +1,6 @@
 package com.cloud.identity.controller;
 
-import com.cloud.identity.model.Utilisateur;
+import com.cloud.identity.entities.Utilisateur;
 import com.cloud.identity.service.AuthService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
