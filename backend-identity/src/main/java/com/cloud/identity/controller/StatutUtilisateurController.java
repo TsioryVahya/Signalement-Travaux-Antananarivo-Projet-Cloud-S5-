@@ -1,7 +1,7 @@
 package com.cloud.identity.controller;
 
-import com.cloud.identity.entities.Signalement;
-import com.cloud.identity.repository.SignalementRepository;
+import com.cloud.identity.entities.StatutUtilisateur;
+import com.cloud.identity.repository.StatutUtilisateurRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -9,32 +9,32 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/signalements")
+@RequestMapping("/api/statuts-utilisateur")
 @CrossOrigin(origins = "*")
-public class SignalementController {
+public class StatutUtilisateurController {
 
     @Autowired
-    private SignalementRepository repository;
+    private StatutUtilisateurRepository repository;
 
     @GetMapping
-    public List<Signalement> getAll() {
+    public List<StatutUtilisateur> getAll() {
         return repository.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Signalement> getById(@PathVariable Integer id) {
+    public ResponseEntity<StatutUtilisateur> getById(@PathVariable Integer id) {
         return repository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Signalement create(@RequestBody Signalement entity) {
+    public StatutUtilisateur create(@RequestBody StatutUtilisateur entity) {
         return repository.save(entity);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Signalement> update(@PathVariable Integer id, @RequestBody Signalement entity) {
+    public ResponseEntity<StatutUtilisateur> update(@PathVariable Integer id, @RequestBody StatutUtilisateur entity) {
         if (!repository.existsById(id)) return ResponseEntity.notFound().build();
         entity.setId(id);
         return ResponseEntity.ok(repository.save(entity));
