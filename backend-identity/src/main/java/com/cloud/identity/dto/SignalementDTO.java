@@ -4,14 +4,16 @@ import java.math.BigDecimal;
 
 public class SignalementDTO {
     private String idFirebase;
+    private String postgresId;
     private Double latitude;
     private Double longitude;
     private String dateSignalement;
     private String description;
     private Double surfaceM2;
-    private BigDecimal budget;
+    private Object budget; // Peut être String ou Number dans Firestore
     private String entrepriseConcerne;
     private String photoUrl;
+    private String statut;
     private UtilisateurDTO utilisateur;
 
     public static class UtilisateurDTO {
@@ -32,6 +34,14 @@ public class SignalementDTO {
 
     public void setIdFirebase(String idFirebase) {
         this.idFirebase = idFirebase;
+    }
+
+    public String getPostgresId() {
+        return postgresId;
+    }
+
+    public void setPostgresId(String postgresId) {
+        this.postgresId = postgresId;
     }
 
     public Double getLatitude() {
@@ -74,11 +84,11 @@ public class SignalementDTO {
         this.surfaceM2 = surfaceM2;
     }
 
-    public BigDecimal getBudget() {
+    public Object getBudget() {
         return budget;
     }
 
-    public void setBudget(BigDecimal budget) {
+    public void setBudget(Object budget) {
         this.budget = budget;
     }
 
@@ -96,6 +106,14 @@ public class SignalementDTO {
 
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public String getStatut() {
+        return statut;
+    }
+
+    public void setStatut(String statut) {
+        this.statut = statut;
     }
 
     public UtilisateurDTO getUtilisateur() {

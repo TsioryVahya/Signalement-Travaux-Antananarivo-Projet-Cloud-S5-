@@ -1,17 +1,18 @@
 package com.cloud.identity.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "utilisateurs")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Utilisateur {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @ColumnDefault("uuid_generate_v4()")
     @Column(name = "id", nullable = false)
     private UUID id;
 
@@ -21,17 +22,23 @@ public class Utilisateur {
     @Column(name = "mot_de_passe", nullable = false)
     private String motDePasse;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id")
     private Role role;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "statut_actuel_id")
-    private StatutsUtilisateur statutActuel;
+    private StatutUtilisateur statutActuel;
 
     @ColumnDefault("0")
     @Column(name = "tentatives_connexion")
     private Integer tentativesConnexion;
+
+    @Column(name = "date_dernier_echec_connexion")
+    private Instant dateDernierEchecConnexion;
+
+    @Column(name = "date_deblocage_automatique")
+    private Instant dateDeblocageAutomatique;
 
     @Column(name = "derniere_connexion")
     private Instant derniereConnexion;
@@ -72,11 +79,11 @@ public class Utilisateur {
         this.role = role;
     }
 
-    public StatutsUtilisateur getStatutActuel() {
+    public StatutUtilisateur getStatutActuel() {
         return statutActuel;
     }
 
-    public void setStatutActuel(StatutsUtilisateur statutActuel) {
+    public void setStatutActuel(StatutUtilisateur statutActuel) {
         this.statutActuel = statutActuel;
     }
 
@@ -86,6 +93,22 @@ public class Utilisateur {
 
     public void setTentativesConnexion(Integer tentativesConnexion) {
         this.tentativesConnexion = tentativesConnexion;
+    }
+
+    public Instant getDateDernierEchecConnexion() {
+        return dateDernierEchecConnexion;
+    }
+
+    public void setDateDernierEchecConnexion(Instant dateDernierEchecConnexion) {
+        this.dateDernierEchecConnexion = dateDernierEchecConnexion;
+    }
+
+    public Instant getDateDeblocageAutomatique() {
+        return dateDeblocageAutomatique;
+    }
+
+    public void setDateDeblocageAutomatique(Instant dateDeblocageAutomatique) {
+        this.dateDeblocageAutomatique = dateDeblocageAutomatique;
     }
 
     public Instant getDerniereConnexion() {
@@ -102,18 +125,6 @@ public class Utilisateur {
 
     public void setDateCreation(Instant dateCreation) {
         this.dateCreation = dateCreation;
-    }
-
-    public String getStatut() {
-        return statutActuel != null ? statutActuel.getNom() : null;
-    }
-
-    public void setStatut(String statut) {
-        if (statut != null) {
-            StatutsUtilisateur s = new StatutsUtilisateur();
-            s.setNom(statut);
-            this.statutActuel = s;
-        }
     }
 
 }

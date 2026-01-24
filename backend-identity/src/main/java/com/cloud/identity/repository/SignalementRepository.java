@@ -4,8 +4,10 @@ import com.cloud.identity.entities.Signalement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface SignalementRepository extends JpaRepository<Signalement, UUID> {
+    Optional<Signalement> findByIdFirebase(String idFirebase);
 }

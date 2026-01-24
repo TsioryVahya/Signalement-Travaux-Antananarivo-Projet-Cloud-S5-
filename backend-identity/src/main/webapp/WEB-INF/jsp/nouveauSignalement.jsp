@@ -15,7 +15,7 @@
     <div class="form-container">
         <h2 class="mb-4 text-center">Nouveau Signalement</h2>
         
-        <form action="/signalements/nouveau" method="post">
+        <form id="signalementForm">
             <div class="mb-3">
                 <label for="email" class="form-label">Email Utilisateur</label>
                 <input type="email" class="form-control" id="email" name="email" placeholder="exemple@mail.com" required>
@@ -63,8 +63,45 @@
                 <a href="/signalements" class="btn btn-outline-secondary">Annuler</a>
             </div>
         </form>
+        <div id="message" class="mt-3"></div>
     </div>
 </div>
+
+<script>
+    document.getElementById('signalementForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const data = Object.fromEntries(formData.entries());
+        
+        // Conversion des types numériques
+        data.latitude = parseFloat(data.latitude);
+        data.longitude = parseFloat(data.longitude);
+        if (data.surfaceM2) data.surfaceM2 = parseFloat(data.surfaceM2);
+        if (data.budget) data.budget = parseFloat(data.budget);
+
+        const messageDiv = document.getElementById('message');
+
+        try {
+            const response = await fetch('/api/signalements', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            if (response.ok) {
+                messageDiv.innerHTML = '<div class="alert alert-success">Signalement créé avec succès ! Redirection...</div>';
+                setTimeout(() => window.location.href = '/signalements', 1500);
+            } else {
+                const error = await response.text();
+                messageDiv.innerHTML = `<div class="alert alert-danger">Erreur : \${error}</div>`;
+            }
+        } catch (error) {
+            messageDiv.innerHTML = `<div class="alert alert-danger">Erreur réseau : \${error.message}</div>`;
+        }
+    });
+</script>
 
 </body>
 </html>

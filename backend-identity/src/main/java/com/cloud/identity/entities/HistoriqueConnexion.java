@@ -1,7 +1,7 @@
 package com.cloud.identity.entities;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "historique_connexions")
@@ -15,7 +15,7 @@ public class HistoriqueConnexion {
     private Utilisateur utilisateur;
 
     @Column(name = "date_tentative")
-    private LocalDateTime dateTentative = LocalDateTime.now();
+    private Instant dateTentative = Instant.now();
 
     @Column(nullable = false)
     private Boolean succes;
@@ -34,8 +34,8 @@ public class HistoriqueConnexion {
     public void setId(Integer id) { this.id = id; }
     public Utilisateur getUtilisateur() { return utilisateur; }
     public void setUtilisateur(Utilisateur utilisateur) { this.utilisateur = utilisateur; }
-    public LocalDateTime getDateTentative() { return dateTentative; }
-    public void setDateTentative(LocalDateTime dateTentative) { this.dateTentative = dateTentative; }
+    public Instant getDateTentative() { return dateTentative; }
+    public void setDateTentative(Instant dateTentative) { this.dateTentative = dateTentative; }
     public Boolean getSucces() { return succes; }
     public void setSucces(Boolean succes) { this.succes = succes; }
     public String getIpAddress() { return ipAddress; }

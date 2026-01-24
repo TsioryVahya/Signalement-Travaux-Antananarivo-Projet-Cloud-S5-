@@ -19,28 +19,53 @@ public class FirebaseSignalementListener {
 
     @PostConstruct
     public void init() {
-        firestore.collection("signalements")
+        System.out.println("🔥🔥🔥 INITIALISATION DU LISTENER FIREBASE... 🔥🔥🔥");
+        try {
+            if (firestore == null) {
+                System.err.println("❌ ERREUR : Le bean Firestore est NULL !");
+                return;
+            }
+            
+            firestore.collection("signalements")
                 .addSnapshotListener((snapshots, e) -> {
+                    System.out.println("🔔 Événement Firestore reçu !");
                     if (e != null) {
-                        System.err.println("Erreur Firestore: " + e.getMessage());
+                        System.err.println("ERREUR CRITIQUE Firestore SnapshotListener : " + e.getMessage());
+                        e.printStackTrace();
                         return;
                     }
 
                     if (snapshots != null) {
+                        System.out.println("Firebase Listener : " + snapshots.getDocumentChanges().size() + " changements détectés.");
                         for (DocumentChange dc : snapshots.getDocumentChanges()) {
                             if (dc.getType() == DocumentChange.Type.ADDED) {
                                 try {
-                                    System.out.println("Nouveau signalement détecté dans Firestore: " + dc.getDocument().getId());
+                                    String docId = dc.getDocument().getId();
+                                    System.out.println("Nouveau document Firebase détecté : " + docId);
+                                    
+                                    // Vérifier si le document contient déjà un postgresId (pour éviter les boucles)
+                                    if (dc.getDocument().contains("postgresId") && dc.getDocument().get("postgresId") != null) {
+                                        System.out.println("Document " + docId + " ignoré (déjà synchronisé avec PostgresId : " + dc.getDocument().get("postgresId") + ")");
+                                        continue;
+                                    }
+
                                     SignalementDTO dto = dc.getDocument().toObject(SignalementDTO.class);
-                                    dto.setIdFirebase(dc.getDocument().getId());
+                                    dto.setIdFirebase(docId);
                                     signalementService.enregistrerSignalement(dto);
                                 } catch (Exception ex) {
-                                    System.err.println("Erreur lors du traitement d'un document Firestore : " + ex.getMessage());
+                                    System.err.println("Erreur lors du traitement du document Firestore " + dc.getDocument().getId() + " : " + ex.getMessage());
                                     ex.printStackTrace();
                                 }
                             }
                         }
+                    } else {
+                        System.out.println("Firebase Listener : snapshots est null.");
                     }
                 });
+            System.out.println("✅ LISTENER FIREBASE ATTACHÉ AVEC SUCCÈS !");
+        } catch (Exception ex) {
+            System.err.println("❌ ERREUR LORS DE L'ATTACHEMENT DU LISTENER FIREBASE : " + ex.getMessage());
+            ex.printStackTrace();
+        }
     }
 }

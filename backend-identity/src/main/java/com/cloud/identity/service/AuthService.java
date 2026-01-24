@@ -1,14 +1,12 @@
 package com.cloud.identity.service;
 
-import com.cloud.identity.entities.Utilisateur;
-import com.cloud.identity.repository.UtilisateurRepository;
 import com.cloud.identity.entities.*;
 import com.cloud.identity.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,6 +32,11 @@ public class AuthService {
     private ConfigurationRepository configurationRepository;
 
     @Transactional
+    public Optional<Session> login(String email, String password) {
+        return login(email, password, null, null);
+    }
+
+    @Transactional
     public Optional<Session> login(String email, String password, String ipAddress, String userAgent) {
         Optional<Utilisateur> userOpt = utilisateurRepository.findByEmail(email);
         
@@ -41,9 +44,9 @@ public class AuthService {
             Utilisateur user = userOpt.get();
             
             // Vérifier si le compte est bloqué
-            if ("BLOQUE".equals(user.getStatutActuel().getNom())) {
+            if (user.getStatutActuel() != null && "BLOQUE".equals(user.getStatutActuel().getNom())) {
                 // Vérifier si le déblocage automatique est possible
-                if (user.getDateDeblocageAutomatique() != null && user.getDateDeblocageAutomatique().isBefore(LocalDateTime.now())) {
+                if (user.getDateDeblocageAutomatique() != null && user.getDateDeblocageAutomatique().isBefore(Instant.now())) {
                     unblockUser(user);
                 } else {
                     saveHistorique(user, false, ipAddress, userAgent, "compte_bloque");
@@ -54,7 +57,7 @@ public class AuthService {
             if (user.getMotDePasse().equals(password)) {
                 // Succès
                 user.setTentativesConnexion(0);
-                user.setDerniereConnexion(LocalDateTime.now());
+                user.setDerniereConnexion(Instant.now());
                 utilisateurRepository.save(user);
                 
                 saveHistorique(user, true, ipAddress, userAgent, null);
@@ -63,8 +66,8 @@ public class AuthService {
             } else {
                 // Échec
                 int maxTentatives = Integer.parseInt(getConfig("max_tentatives_connexion", "3"));
-                user.setTentativesConnexion(user.getTentativesConnexion() + 1);
-                user.setDateDernierEchecConnexion(LocalDateTime.now());
+                user.setTentativesConnexion((user.getTentativesConnexion() != null ? user.getTentativesConnexion() : 0) + 1);
+                user.setDateDernierEchecConnexion(Instant.now());
                 
                 if (user.getTentativesConnexion() >= maxTentatives) {
                     blockUser(user);
@@ -98,7 +101,7 @@ public class AuthService {
         session.setRefreshToken(UUID.randomUUID().toString());
         session.setIpConnexion(ip);
         session.setUserAgent(ua);
-        session.setDateExpiration(LocalDateTime.now().plusHours(dureeHeures));
+        session.setDateExpiration(Instant.now().plusSeconds(dureeHeures * 3600));
         return sessionRepository.save(session);
     }
 
@@ -114,7 +117,14 @@ public class AuthService {
         user.setStatutActuel(bloque);
         
         int minutesBlocage = Integer.parseInt(getConfig("duree_blocage_minutes", "15"));
-        user.setDateDeblocageAutomatique(LocalDateTime.now().plusMinutes(minutesBlocage));
+        user.setDateDeblocageAutomatique(Instant.now().plusSeconds(minutesBlocage * 60));
+    }
+
+    @Transactional
+    public void unblockUser(String email) {
+        Utilisateur user = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        unblockUser(user);
     }
 
     private void unblockUser(Utilisateur user) {

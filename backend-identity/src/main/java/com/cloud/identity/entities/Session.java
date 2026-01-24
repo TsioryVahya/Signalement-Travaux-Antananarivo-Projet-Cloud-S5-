@@ -1,7 +1,7 @@
 package com.cloud.identity.entities;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 
 @Entity
@@ -22,13 +22,13 @@ public class Session {
     private String refreshToken;
 
     @Column(name = "date_creation")
-    private LocalDateTime dateCreation = LocalDateTime.now();
+    private Instant dateCreation = Instant.now();
 
     @Column(name = "date_expiration", nullable = false)
-    private LocalDateTime dateExpiration;
+    private Instant dateExpiration;
 
     @Column(name = "date_derniere_activite")
-    private LocalDateTime dateDerniereActivite = LocalDateTime.now();
+    private Instant dateDerniereActivite = Instant.now();
 
     @Column(name = "ip_connexion")
     private String ipConnexion;
@@ -48,12 +48,12 @@ public class Session {
     public void setTokenAcces(String tokenAcces) { this.tokenAcces = tokenAcces; }
     public String getRefreshToken() { return refreshToken; }
     public void setRefreshToken(String refreshToken) { this.refreshToken = refreshToken; }
-    public LocalDateTime getDateCreation() { return dateCreation; }
-    public void setDateCreation(LocalDateTime dateCreation) { this.dateCreation = dateCreation; }
-    public LocalDateTime getDateExpiration() { return dateExpiration; }
-    public void setDateExpiration(LocalDateTime dateExpiration) { this.dateExpiration = dateExpiration; }
-    public LocalDateTime getDateDerniereActivite() { return dateDerniereActivite; }
-    public void setDateDerniereActivite(LocalDateTime dateDerniereActivite) { this.dateDerniereActivite = dateDerniereActivite; }
+    public Instant getDateCreation() { return dateCreation; }
+    public void setDateCreation(Instant dateCreation) { this.dateCreation = dateCreation; }
+    public Instant getDateExpiration() { return dateExpiration; }
+    public void setDateExpiration(Instant dateExpiration) { this.dateExpiration = dateExpiration; }
+    public Instant getDateDerniereActivite() { return dateDerniereActivite; }
+    public void setDateDerniereActivite(Instant dateDerniereActivite) { this.dateDerniereActivite = dateDerniereActivite; }
     public String getIpConnexion() { return ipConnexion; }
     public void setIpConnexion(String ipConnexion) { this.ipConnexion = ipConnexion; }
     public String getUserAgent() { return userAgent; }

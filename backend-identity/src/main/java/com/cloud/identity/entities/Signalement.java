@@ -1,6 +1,6 @@
 package com.cloud.identity.entities;
 
-import com.cloud.identity.listeners.SignalementEntityListener;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import org.hibernate.annotations.ColumnDefault;
 
@@ -8,8 +8,8 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@EntityListeners(SignalementEntityListener.class)
 @Table(name = "signalements")
+@JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Signalement {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -23,7 +23,7 @@ public class Signalement {
     @Column(name = "date_signalement")
     private Instant dateSignalement;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "statut_id")
     private StatutsSignalement statut;
 
@@ -33,7 +33,7 @@ public class Signalement {
     @Column(name = "longitude", nullable = false)
     private Double longitude;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 

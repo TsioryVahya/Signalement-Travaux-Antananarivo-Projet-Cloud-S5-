@@ -1,7 +1,7 @@
 package com.cloud.identity.entities;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Table(name = "configurations")
@@ -17,7 +17,7 @@ public class Configuration {
     private String description;
 
     @Column(name = "date_modification")
-    private LocalDateTime dateModification = LocalDateTime.now();
+    private Instant dateModification = Instant.now();
 
     // Getters and Setters
     public String getCle() { return cle; }
@@ -26,6 +26,6 @@ public class Configuration {
     public void setValeur(String valeur) { this.valeur = valeur; }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
-    public LocalDateTime getDateModification() { return dateModification; }
-    public void setDateModification(LocalDateTime dateModification) { this.dateModification = dateModification; }
+    public Instant getDateModification() { return dateModification; }
+    public void setDateModification(Instant dateModification) { this.dateModification = dateModification; }
 }

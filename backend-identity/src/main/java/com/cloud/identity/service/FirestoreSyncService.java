@@ -40,13 +40,14 @@ public class FirestoreSyncService {
             if (details != null) {
                 data.put("description", details.getDescription());
                 data.put("surfaceM2", details.getSurfaceM2());
-                data.put("budget", details.getBudget());
+                data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
                 data.put("entrepriseConcerne", details.getEntrepriseConcerne());
                 data.put("photoUrl", details.getPhotoUrl());
             }
 
             // Ajouter à Firestore et récupérer l'ID généré
             DocumentReference docRef = firestore.collection("signalements").document();
+            data.put("idFirebase", docRef.getId()); // Ajouter l'ID dans le document lui-même
             docRef.set(data).get(); // .get() pour attendre la fin de l'opération
             
             System.out.println("Signalement créé dans Firestore avec ID : " + docRef.getId());
