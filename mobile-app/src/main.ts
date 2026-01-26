@@ -2,6 +2,11 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { IonicVue } from '@ionic/vue';
 import router from './router';
+import './tailwind.css';
+import { defineCustomElements } from '@ionic/pwa-elements/loader';
+
+// Call the element loader before the render call
+defineCustomElements(window);
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/vue/css/core.css';

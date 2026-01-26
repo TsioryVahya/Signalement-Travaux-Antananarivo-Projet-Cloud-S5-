@@ -27,16 +27,13 @@ public class FirestoreConfig {
                 throw new IOException("Fichier serviceAccountKey.json introuvable dans le classpath !");
             }
 
-            // Créer les credentials avec le scope par défaut requis pour Cloud
-            // Platform/Firestore
-            GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount)
-                    .createScoped("https://www.googleapis.com/auth/cloud-platform");
+            // Créer les credentials
+            GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
 
             // Initialiser Firebase Admin SDK UNE SEULE FOIS
             if (FirebaseApp.getApps().isEmpty()) {
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(credentials)
-                        .setProjectId("synchronisation-ab2ec")
                         .build();
 
                 FirebaseApp.initializeApp(options);

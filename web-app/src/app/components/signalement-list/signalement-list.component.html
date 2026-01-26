@@ -1,51 +1,136 @@
-<div class="space-y-6">
-  <header class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+<div class="space-y-8 animate-in fade-in duration-500">
+  <!-- Header with Stats -->
+  <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
     <div>
-      <h1 class="text-2xl font-bold text-gray-800">Gestion des Signalements</h1>
-      <p class="text-sm text-gray-500">Suivez et gérez les rapports de travaux routiers</p>
+      <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Gestion des Signalements</h1>
+      <p class="text-slate-500 font-medium mt-1">Suivez et gérez les rapports de travaux routiers en temps réel</p>
     </div>
-    <div class="bg-blue-50 text-blue-600 px-4 py-2 rounded-lg font-medium">
-      {{ signalements.length }} signalements au total
+    
+    <div class="flex items-center gap-4 w-full md:w-auto">
+      <div *ngIf="syncMessage" 
+           [class]="'text-sm px-4 py-2 rounded-xl font-bold border animate-in slide-in-from-right-4 ' + (syncMessage.includes('Erreur') ? 'bg-red-50 text-red-600 border-red-100' : 'bg-green-50 text-green-600 border-green-100')">
+        {{ syncMessage }}
+      </div>
+      <button (click)="syncFromMobile()" 
+              [disabled]="isSyncing"
+              class="flex items-center gap-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-lg shadow-blue-200 active:scale-95 group">
+        <svg *ngIf="!isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-500 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        <svg *ngIf="isSyncing" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+        {{ isSyncing ? 'Synchronisation...' : 'Synchroniser Mobile' }}
+      </button>
     </div>
   </header>
 
-  <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Total</span>
+      </div>
+      <p class="text-slate-500 text-sm font-semibold">Signalements</p>
+      <h3 class="text-3xl font-black text-slate-900 mt-1">{{ stats.total }}</h3>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <span class="text-xs font-bold text-blue-400 uppercase tracking-widest">Nouveaux</span>
+      </div>
+      <p class="text-slate-500 text-sm font-semibold">En attente</p>
+      <h3 class="text-3xl font-black text-blue-600 mt-1">{{ stats.nouveau }}</h3>
+    </div>
+
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+      <div class="flex items-center justify-between mb-4">
+        <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Actifs</span>
+      </div>
+      <p class="text-slate-500 text-sm font-semibold">En cours</p>
+      <h3 class="text-3xl font-black text-amber-600 mt-1">{{ stats.enCours }}</h3>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/50 overflow-hidden">
     <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead class="bg-gray-50 border-b border-gray-100">
-          <tr>
-            <th class="px-6 py-4 text-sm font-semibold text-gray-600">Date</th>
-            <th class="px-6 py-4 text-sm font-semibold text-gray-600">Statut</th>
-            <th class="px-6 py-4 text-sm font-semibold text-gray-600">Description</th>
-            <th class="px-6 py-4 text-sm font-semibold text-gray-600">Budget / Surface</th>
-            <th class="px-6 py-4 text-sm font-semibold text-gray-600">Actions</th>
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-50/50 border-b border-slate-100">
+            <th class="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Date & Heure</th>
+            <th class="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Statut</th>
+            <th class="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Description & Auteur</th>
+            <th class="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest">Budget / Surface</th>
+            <th class="px-8 py-5 text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-50">
-          <tr *ngFor="let s of signalements" class="hover:bg-gray-50/50 transition-colors">
-            <td class="px-6 py-4 text-sm text-gray-600">
-              <span class="font-medium text-gray-900">{{ s.dateSignalement | date:'shortDate' }}</span><br>
-              <span class="text-xs text-gray-400">{{ s.dateSignalement | date:'shortTime' }}</span>
+        <tbody class="divide-y divide-slate-50">
+          <tr *ngFor="let s of signalements" class="hover:bg-slate-50/80 transition-all group">
+            <td class="px-8 py-5">
+              <div class="font-bold text-slate-700">{{ s.dateSignalement | date:'dd MMM yyyy' }}</div>
+              <div class="text-xs text-slate-400 font-medium">{{ s.dateSignalement | date:'HH:mm' }}</div>
             </td>
-            <td class="px-6 py-4">
-              <select [ngModel]="s.statut.id" (ngModelChange)="onStatusChange(s, $event)" 
-                      class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2 font-medium">
+            <td class="px-8 py-5">
+              <select [ngModel]="getStatusId(s.statut)" (ngModelChange)="onStatusChange(s, $event)" 
+                      [class]="'appearance-none px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer focus:ring-4 focus:ring-opacity-20 outline-none ' + getStatusClass(s.statut)">
                 <option *ngFor="let status of statuses" [value]="status.id">
-                  {{ status.nom }}
+                  {{ status.nom | uppercase }}
                 </option>
               </select>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-600 max-w-xs">
-              <div class="truncate font-medium text-gray-800">{{ s.description || '-' }}</div>
-              <div class="text-xs text-gray-400 mt-1" *ngIf="s.entrepriseConcerne">🏢 {{ s.entrepriseConcerne }}</div>
+            <td class="px-8 py-5">
+              <div class="max-w-xs">
+                <div class="font-bold text-slate-800 truncate" [title]="s.description || 'Sans description'">
+                  {{ s.description || 'Pas de description' }}
+                </div>
+                <div class="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                  {{ s.utilisateur?.email || 'Anonyme' }}
+                </div>
+              </div>
             </td>
-            <td class="px-6 py-4 text-sm text-gray-500">
-              <div class="font-medium text-blue-600">{{ s.budget ? (s.budget | currency:'Ar ':'symbol':'1.0-0') : '-' }}</div>
-              <div class="text-xs text-gray-400">{{ s.surfaceM2 ? s.surfaceM2 + ' m²' : '-' }}</div>
+            <td class="px-8 py-5">
+              <div class="font-black text-slate-700">{{ s.budget ? (s.budget | currency:'MGA ':'symbol':'1.0-0') : '-' }}</div>
+              <div class="text-xs text-slate-400 font-bold tracking-tight">{{ s.surfaceM2 ? s.surfaceM2 + ' m²' : '-' }}</div>
             </td>
-            <td class="px-6 py-4 space-x-2 whitespace-nowrap">
-              <button class="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors" (click)="openEditModal(s)">Modifier</button>
-              <button class="text-red-600 hover:text-red-800 font-medium text-sm transition-colors" (click)="deleteSignalement(s.id)">Supprimer</button>
+            <td class="px-8 py-5 text-right">
+              <div class="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button *ngIf="s.photoUrl" 
+                        (click)="openPhotoModal(s.photoUrl)"
+                        class="p-2.5 text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Voir Photo">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </button>
+                <button (click)="openEditModal(s)" 
+                        class="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all" title="Modifier">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button (click)="deleteSignalement(s.postgresId || s.id)" 
+                        class="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Supprimer">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -53,64 +138,79 @@
     </div>
   </div>
 
-  <!-- Edit Modal -->
-  <div *ngIf="showEditModal" class="fixed inset-0 z-[3000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in duration-200">
-      <div class="bg-blue-600 px-8 py-6 text-white">
-        <h3 class="text-xl font-bold flex items-center">
-          <span class="mr-3">⚙️</span>
-          Modifier les détails des travaux
+  <!-- Photo Modal -->
+  <div *ngIf="showPhotoModal" 
+       class="fixed inset-0 z-[5000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
+       (click)="closePhotoModal()">
+    <div class="bg-white rounded-[2rem] max-w-4xl w-full overflow-hidden shadow-2xl animate-in zoom-in duration-300" 
+         (click)="$event.stopPropagation()">
+      <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+        <h3 class="font-black text-slate-800 text-xl tracking-tight">Détails de la Photo</h3>
+        <button (click)="closePhotoModal()" class="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-600 shadow-sm transition-all active:scale-90">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-8 flex items-center justify-center bg-slate-100/30">
+        <img [src]="selectedPhotoUrl" alt="Signalement" class="max-w-full max-h-[70vh] rounded-2xl shadow-2xl object-contain">
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal (Simplified for now) -->
+  <div *ngIf="showEditModal" 
+       class="fixed inset-0 z-[4000] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div class="bg-white rounded-[2rem] shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in duration-200">
+      <div class="bg-blue-600 p-8 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+        <h3 class="text-2xl font-black flex items-center relative z-10">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          Modifier les détails
         </h3>
       </div>
       
-      <div class="p-8 space-y-5">
-        <div class="grid grid-cols-2 gap-4">
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Description</label>
+      <div class="p-8 space-y-6">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Description</label>
             <textarea 
               [(ngModel)]="editingSignalement.description"
               rows="3"
-              class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none resize-none text-slate-700"></textarea>
+              class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none resize-none text-slate-700 font-medium"></textarea>
           </div>
           
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Budget Estimé (Ar)</label>
-            <input 
-              type="number"
-              [(ngModel)]="editingSignalement.budget"
-              class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-700">
-          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Budget (Ar)</label>
+              <input 
+                type="number"
+                [(ngModel)]="editingSignalement.budget"
+                class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-slate-700 font-bold">
+            </div>
 
-          <div>
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Surface (m²)</label>
-            <input 
-              type="number"
-              [(ngModel)]="editingSignalement.surfaceM2"
-              class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-700">
-          </div>
-
-          <div class="col-span-2">
-            <label class="block text-sm font-semibold text-slate-700 mb-1">Entreprise Concernée</label>
-            <input 
-              type="text"
-              [(ngModel)]="editingSignalement.entrepriseConcerne"
-              placeholder="Ex: Entreprise de BTP..."
-              class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all outline-none text-slate-700">
+            <div>
+              <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Surface (m²)</label>
+              <input 
+                type="number"
+                [(ngModel)]="editingSignalement.surfaceM2"
+                class="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none text-slate-700 font-bold">
+            </div>
           </div>
         </div>
         
-        <div class="flex space-x-3 mt-6">
-          <button 
-            (click)="closeEditModal()"
-            class="flex-1 px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors">
+        <div class="flex gap-3 pt-4">
+          <button (click)="closeEditModal()" 
+                  class="flex-1 px-6 py-4 border border-slate-200 text-slate-500 font-bold rounded-2xl hover:bg-slate-50 transition-all active:scale-95">
             Annuler
           </button>
-          <button 
-            (click)="saveSignalement()"
-            [disabled]="isSaving"
-            class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white font-bold rounded-xl shadow-lg shadow-blue-200 transition-all flex items-center justify-center">
-            <span *ngIf="isSaving" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
-            {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
+          <button (click)="saveSignalement()" 
+                  [disabled]="isSaving"
+                  class="flex-2 px-10 py-4 bg-blue-600 text-white font-black rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-95 disabled:bg-slate-200">
+            {{ isSaving ? 'Enregistrement...' : 'Sauvegarder' }}
           </button>
         </div>
       </div>

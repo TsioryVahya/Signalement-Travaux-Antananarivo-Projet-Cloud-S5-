@@ -15,10 +15,16 @@ export class SignalementListComponent implements OnInit {
   signalements: Signalement[] = [];
   statuses: StatutSignalement[] = [];
   
-  // Edit Modal State
+  // Modal States
   showEditModal = false;
+  showPhotoModal = false;
+  selectedPhotoUrl = '';
   editingSignalement: any = null;
   isSaving = false;
+
+  // State for synchronization
+  isSyncing = false;
+  syncMessage = '';
 
   constructor(private signalementService: SignalementService) {}
 
@@ -29,9 +35,40 @@ export class SignalementListComponent implements OnInit {
 
   loadSignalements(): void {
     this.signalementService.getAllSignalements().subscribe({
-      next: (data) => this.signalements = data,
+      next: (data) => {
+        this.signalements = data;
+        this.updateStats();
+      },
       error: (err) => console.error(err)
     });
+  }
+
+  stats = {
+    total: 0,
+    nouveau: 0,
+    enCours: 0
+  };
+
+  updateStats(): void {
+    this.stats.total = this.signalements.length;
+    this.stats.nouveau = this.signalements.filter(s => {
+      const st = String(s.statut || '').toLowerCase();
+      return st === 'nouveau';
+    }).length;
+    this.stats.enCours = this.signalements.filter(s => {
+      const st = String(s.statut || '').toLowerCase();
+      return st === 'en cours' || st === 'en_cours';
+    }).length;
+  }
+
+  openPhotoModal(url: string): void {
+    this.selectedPhotoUrl = url;
+    this.showPhotoModal = true;
+  }
+
+  closePhotoModal(): void {
+    this.showPhotoModal = false;
+    this.selectedPhotoUrl = '';
   }
 
   loadStatuses(): void {
@@ -42,11 +79,15 @@ export class SignalementListComponent implements OnInit {
   }
 
   openEditModal(signalement: Signalement): void {
+    // Trouver l'ID du statut correspondant au nom du statut
+    const signalementStatut = String(signalement.statut || '').toLowerCase();
+    const currentStatus = this.statuses.find(st => String(st.nom || '').toLowerCase() === signalementStatut);
+    
     this.editingSignalement = {
-      id: signalement.id,
+      id: signalement.postgresId || signalement.id,
       latitude: signalement.latitude,
       longitude: signalement.longitude,
-      statutId: signalement.statut.id,
+      statutId: currentStatus ? currentStatus.id : 1, // Fallback au premier statut si non trouvé
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
@@ -78,6 +119,9 @@ export class SignalementListComponent implements OnInit {
   }
 
   onStatusChange(signalement: Signalement, newStatusId: string): void {
+    const id = signalement.postgresId || signalement.id;
+    if (!id) return;
+
     const updateData = {
       statutId: parseInt(newStatusId),
       latitude: signalement.latitude,
@@ -88,7 +132,7 @@ export class SignalementListComponent implements OnInit {
       entrepriseConcerne: signalement.entrepriseConcerne
     };
 
-    this.signalementService.updateSignalement(signalement.id, updateData).subscribe({
+    this.signalementService.updateSignalement(id, updateData).subscribe({
       next: () => {
         this.loadSignalements();
       },
@@ -96,7 +140,46 @@ export class SignalementListComponent implements OnInit {
     });
   }
 
-  deleteSignalement(id: string): void {
+  syncFromMobile(): void {
+    this.isSyncing = true;
+    this.syncMessage = 'Synchronisation en cours...';
+    
+    this.signalementService.syncData().subscribe({
+      next: (result) => {
+        this.isSyncing = false;
+        const count = result.signalements || 0;
+        this.syncMessage = `${count} nouveau(x) signalement(s) synchronisé(s).`;
+        this.loadSignalements();
+        // Clear message after 5 seconds
+        setTimeout(() => this.syncMessage = '', 5000);
+      },
+      error: (err) => {
+        console.error('Erreur de synchronisation:', err);
+        this.isSyncing = false;
+        this.syncMessage = 'Erreur lors de la synchronisation.';
+        setTimeout(() => this.syncMessage = '', 5000);
+      }
+    });
+  }
+
+  getStatusId(name: string): number {
+    const searchName = String(name || '').toLowerCase();
+    const status = this.statuses.find(s => String(s.nom || '').toLowerCase() === searchName);
+    return status ? status.id : 1;
+  }
+
+  getStatusClass(statut: any): string {
+    const s = String(statut || '').toLowerCase();
+    if (s === 'nouveau') {
+      return 'bg-blue-50 text-blue-600 border-blue-100 focus:ring-blue-500';
+    } else if (s === 'en cours' || s === 'en_cours') {
+      return 'bg-amber-50 text-amber-600 border-amber-100 focus:ring-amber-500';
+    }
+    return 'bg-green-50 text-green-600 border-green-100 focus:ring-green-500';
+  }
+
+  deleteSignalement(id: string | undefined): void {
+    if (!id) return;
     if (confirm('Êtes-vous sûr de vouloir supprimer ce signalement ?')) {
       this.signalementService.deleteSignalement(id).subscribe({
         next: () => this.loadSignalements(),

@@ -36,11 +36,20 @@ export class StatsComponent implements OnInit {
 
   private calculateStats(data: Signalement[]): void {
     this.stats.total = data.length;
-    this.stats.nouveau = data.filter(s => s.statut.nom.toLowerCase() === 'nouveau').length;
-    this.stats.enCours = data.filter(s => s.statut.nom.toLowerCase() === 'en cours' || s.statut.nom.toLowerCase() === 'en_cours').length;
-    this.stats.termine = data.filter(s => s.statut.nom.toLowerCase() === 'terminé' || s.statut.nom.toLowerCase() === 'termine').length;
+    this.stats.nouveau = data.filter(s => {
+      const st = String(s.statut || '').toLowerCase();
+      return st === 'nouveau';
+    }).length;
+    this.stats.enCours = data.filter(s => {
+      const st = String(s.statut || '').toLowerCase();
+      return st === 'en cours' || st === 'en_cours';
+    }).length;
+    this.stats.termine = data.filter(s => {
+      const st = String(s.statut || '').toLowerCase();
+      return st === 'terminé' || st === 'termine' || st === 'achevé' || st === 'acheve';
+    }).length;
     
-    this.stats.totalBudget = data.reduce((acc, s) => acc + (s.budget || 0), 0);
-    this.stats.totalSurface = data.reduce((acc, s) => acc + (s.surfaceM2 || 0), 0);
+    this.stats.totalBudget = data.reduce((acc, s) => acc + (Number(s.budget) || 0), 0);
+    this.stats.totalSurface = data.reduce((acc, s) => acc + (Number(s.surfaceM2) || 0), 0);
   }
 }

@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import * as L from 'leaflet';
 import { SignalementService } from '../../services/signalement.service';
 import { Signalement } from '../../models/signalement.model';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-map',
@@ -17,17 +18,10 @@ export class MapComponent implements OnInit, AfterViewInit {
   private map: any;
   private signalements: Signalement[] = [];
   private signalementService = inject(SignalementService);
+  public authService = inject(AuthService);
 
-  // Form state
-  showForm = false;
-  newSignalement = {
-    latitude: 0,
-    longitude: 0,
-    description: '',
-    email: ''
-  };
-  isSubmitting = false;
-
+  // Form state removed - web is read-only
+  
   @HostListener('window:resize', ['$event'])
   onResize() {
     if (this.map) {
@@ -59,11 +53,6 @@ export class MapComponent implements OnInit, AfterViewInit {
       attribution: '© OpenStreetMap contributors'
     }).addTo(this.map);
 
-    // Click handler for reporting
-    this.map.on('click', (e: L.LeafletMouseEvent) => {
-      this.onMapClick(e);
-    });
-
     const iconDefault = L.icon({
       iconRetinaUrl: 'assets/leaflet/marker-icon-2x.png',
       iconUrl: 'assets/leaflet/marker-icon.png',
@@ -75,42 +64,6 @@ export class MapComponent implements OnInit, AfterViewInit {
       shadowSize: [41, 41]
     });
     L.Marker.prototype.options.icon = iconDefault;
-  }
-
-  private onMapClick(e: L.LeafletMouseEvent): void {
-    this.newSignalement.latitude = e.latlng.lat;
-    this.newSignalement.longitude = e.latlng.lng;
-    this.showForm = true;
-  }
-
-  submitSignalement(): void {
-    if (!this.newSignalement.description.trim() || !this.newSignalement.email.trim()) return;
-
-    this.isSubmitting = true;
-    const data = {
-      ...this.newSignalement,
-      statutId: 1 // Nouveau par défaut
-    };
-
-    this.signalementService.createSignalement(data).subscribe({
-      next: () => {
-        this.isSubmitting = false;
-        this.showForm = false;
-        this.newSignalement.description = '';
-        this.newSignalement.email = '';
-        this.loadSignalements();
-      },
-      error: (err) => {
-        console.error(err);
-        this.isSubmitting = false;
-      }
-    });
-  }
-
-  cancelReport(): void {
-    this.showForm = false;
-    this.newSignalement.description = '';
-    this.newSignalement.email = '';
   }
 
   private loadSignalements(): void {
@@ -134,7 +87,8 @@ export class MapComponent implements OnInit, AfterViewInit {
     });
 
     this.signalements.forEach(s => {
-      const color = this.getStatusColor(s.statut.nom);
+      const statusName = String(s.statut || 'Nouveau');
+      const color = this.getStatusColor(s.statut);
       
       const marker = L.marker([s.latitude, s.longitude])
         .addTo(this.map)
@@ -142,7 +96,7 @@ export class MapComponent implements OnInit, AfterViewInit {
           <div class="p-2">
             <div class="flex items-center mb-2">
               <span class="w-3 h-3 rounded-full mr-2" style="background-color: ${color}"></span>
-              <strong class="text-slate-800">${s.statut.nom}</strong>
+              <strong class="text-slate-800">${statusName}</strong>
             </div>
             <p class="text-sm text-slate-600 mb-1">${s.description || 'Pas de description'}</p>
             <div class="text-[10px] text-slate-400 border-t pt-1">
@@ -157,11 +111,14 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   private getStatusColor(status: string): string {
-    switch(status.toUpperCase()) {
-      case 'NOUVEAU': return '#3b82f6'; // blue-500
-      case 'EN_COURS': return '#eab308'; // yellow-500
-      case 'TERMINE': return '#22c55e'; // green-500
-      default: return '#94a3b8'; // slate-400
+    const st = String(status || '').toLowerCase();
+    switch (st) {
+      case 'nouveau': return '#3b82f6'; // blue-500
+      case 'en cours':
+      case 'en_cours': return '#f59e0b'; // amber-500
+      case 'terminé':
+      case 'termine': return '#10b981'; // emerald-500
+      default: return '#64748b'; // slate-500
     }
   }
 }

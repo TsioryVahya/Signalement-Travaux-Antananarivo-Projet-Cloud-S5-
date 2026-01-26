@@ -8,7 +8,8 @@ import java.util.UUID;
 @Table(name = "sessions")
 public class Session {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "id", nullable = false)
     private UUID id;
 
     @ManyToOne

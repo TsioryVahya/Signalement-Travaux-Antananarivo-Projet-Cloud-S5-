@@ -4,19 +4,19 @@ export interface StatutSignalement {
 }
 
 export interface Signalement {
-  id: string;
+  id?: string;
+  postgresId?: string;
   idFirebase?: string;
   dateSignalement: string;
-  statut: StatutSignalement;
+  statut: string; // Changé de StatutSignalement à string pour correspondre au DTO
   latitude: number;
   longitude: number;
   description?: string;
   surfaceM2?: number;
-  budget?: number;
+  budget?: any;
   entrepriseConcerne?: string;
   photoUrl?: string;
   utilisateur?: {
-    id: string;
     email: string;
   };
 }

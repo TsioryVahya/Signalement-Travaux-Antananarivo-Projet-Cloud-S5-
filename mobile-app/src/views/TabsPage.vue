@@ -2,18 +2,18 @@
   <ion-page>
     <ion-tabs>
       <ion-router-outlet></ion-router-outlet>
-      <ion-tab-bar slot="bottom" class="border-t border-slate-100 h-16  backdrop-blur-lg shadow-lg">
-        <ion-tab-button tab="map" href="/tabs/map" class="text-slate-400 hover:text-slate-600 transition-colors">
-          <ion-icon :icon="mapOutline" class="text-2xl" />
+      <ion-tab-bar slot="bottom" class="border-t border-slate-100 h-16 backdrop-blur-lg shadow-lg">
+        <ion-tab-button tab="map" href="/tabs/map">
+          <ion-icon :icon="mapOutline" />
+          <ion-label class="hidden-label">Carte</ion-label>
         </ion-tab-button>
 
-        <ion-tab-button tab="list" href="/tabs/list" class="text-slate-400 hover:text-slate-600 transition-colors relative">
-          <div class="relative">
-            <ion-icon :icon="listOutline" class="text-2xl" />
-            <div v-if="store.signalements.length > 0" class="absolute -top-1 -right-2 bg-blue-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white shadow-sm">
-              {{ store.signalements.length }}
-            </div>
-          </div>
+        <ion-tab-button tab="list" href="/tabs/list">
+          <ion-icon :icon="listOutline" />
+          <ion-badge v-if="store.signalements.length > 0" color="primary" class="custom-badge">
+            {{ store.signalements.length }}
+          </ion-badge>
+          <ion-label class="hidden-label">Liste</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
@@ -21,18 +21,44 @@
 </template>
 
 <script setup lang="ts">
-import { IonPage, IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon } from '@ionic/vue';
+import { IonPage, IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel, IonBadge } from '@ionic/vue';
 import { mapOutline, listOutline } from 'ionicons/icons';
 import { store } from '../store';
 </script>
 
+
 <style scoped>
-ion-tab-button.tab-selected {
-  color: #2563eb; /* text-blue-600 */
+ion-tab-bar {
+  --background: rgba(255, 255, 255, 0.8);
 }
-ion-tab-button.tab-selected ion-icon {
-  transform: scale(1.1);
-  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  filter: drop-shadow(0 4px 6px rgba(37, 99, 235, 0.2));
+
+ion-tab-button {
+  --color: #94a3b8; /* slate-400 */
+  --color-selected: #2563eb; /* blue-600 */
+  transition: all 0.2s ease;
+}
+
+ion-icon {
+  font-size: 24px;
+}
+
+.hidden-label {
+  display: none;
+}
+
+.custom-badge {
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 18px);
+  --padding-start: 4px;
+  --padding-end: 4px;
+  min-width: 16px;
+  height: 16px;
+  font-size: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  border-radius: 50%;
 }
 </style>

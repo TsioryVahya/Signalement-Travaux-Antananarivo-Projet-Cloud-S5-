@@ -10,7 +10,7 @@ const routes: Array<RouteRecordRaw> = [
     redirect: '/tabs/map'
   },
   {
-    path: '/tabs/',
+    path: '/tabs',
     component: TabsPage,
     children: [
       {

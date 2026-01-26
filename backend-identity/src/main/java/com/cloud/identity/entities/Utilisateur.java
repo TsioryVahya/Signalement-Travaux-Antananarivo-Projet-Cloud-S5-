@@ -12,6 +12,7 @@ import java.util.UUID;
 @JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Utilisateur {
     @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
     @ColumnDefault("uuid_generate_v4()")
     @Column(name = "id", nullable = false)
     private UUID id;

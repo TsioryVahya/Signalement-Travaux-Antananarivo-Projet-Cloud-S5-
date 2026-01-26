@@ -2,12 +2,18 @@ package com.cloud.identity.service;
 
 import com.cloud.identity.entities.Signalement;
 import com.cloud.identity.entities.SignalementsDetail;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.Firestore;
+import com.cloud.identity.repository.SignalementRepository;
+import com.cloud.identity.repository.SignalementsDetailRepository;
+import com.cloud.identity.repository.StatutsSignalementRepository;
+import com.cloud.identity.repository.UtilisateurRepository;
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -15,6 +21,150 @@ public class FirestoreSyncService {
 
     @Autowired
     private Firestore firestore;
+
+    @Autowired
+    private SignalementRepository signalementRepository;
+
+    @Autowired
+    private SignalementsDetailRepository detailsRepository;
+
+    @Autowired
+    private StatutsSignalementRepository statutRepository;
+
+    @Autowired
+    private UtilisateurRepository utilisateurRepository;
+
+    /**
+     * Synchronise les données de Firestore vers PostgreSQL.
+     */
+    public Map<String, Integer> syncFromFirestoreToPostgres() {
+        int syncedSignalements = 0;
+        int createdUsers = 0;
+
+        try {
+            ApiFuture<QuerySnapshot> future = firestore.collection("signalements").get();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+            for (QueryDocumentSnapshot document : documents) {
+                String idFirebase = document.getId();
+                
+                // Vérifier si le signalement existe déjà dans Postgres
+                if (signalementRepository.findByIdFirebase(idFirebase).isPresent()) {
+                    continue;
+                }
+
+                // Extraire les données
+                Double latitude = document.getDouble("latitude");
+                Double longitude = document.getDouble("longitude");
+                String description = document.getString("description");
+                String statutNom = document.getString("statut");
+                
+                // Gérer la date
+                java.time.Instant dateSignalement = java.time.Instant.now();
+                Object dateObj = document.get("date_signalement");
+                if (dateObj == null) dateObj = document.get("dateSignalement");
+                
+                if (dateObj instanceof com.google.cloud.Timestamp) {
+                    dateSignalement = ((com.google.cloud.Timestamp) dateObj).toSqlTimestamp().toInstant();
+                } else if (dateObj instanceof String) {
+                    try {
+                        dateSignalement = java.time.Instant.parse((String) dateObj);
+                    } catch (Exception e) {
+                        System.err.println("Erreur parsing date string: " + dateObj);
+                    }
+                }
+                
+                // Support both camelCase and snake_case from Firestore
+                String photoUrl = document.getString("photoUrl");
+                if (photoUrl == null) photoUrl = document.getString("photo_url");
+                
+                Double surfaceM2 = getAsDouble(document, "surfaceM2");
+                if (surfaceM2 == null) surfaceM2 = getAsDouble(document, "surface_m2");
+                
+                String entrepriseConcerne = document.getString("entrepriseConcerne");
+                if (entrepriseConcerne == null) entrepriseConcerne = document.getString("entreprise_concerne");
+                
+                Object budgetObj = document.get("budget");
+                BigDecimal budget = null;
+                if (budgetObj != null && !budgetObj.toString().isEmpty()) {
+                    try {
+                        budget = new BigDecimal(budgetObj.toString());
+                    } catch (Exception e) {
+                        System.err.println("Erreur conversion budget pour doc " + idFirebase + " : " + budgetObj);
+                    }
+                }
+
+                Map<String, Object> userMap = (Map<String, Object>) document.get("utilisateur");
+                String email = "anonyme@routier.mg";
+                if (userMap != null && userMap.get("email") != null) {
+                    email = (String) userMap.get("email");
+                }
+
+                // Créer le signalement dans Postgres
+                Signalement s = new Signalement();
+                s.setIdFirebase(idFirebase);
+                s.setLatitude(latitude != null ? latitude : 0.0);
+                s.setLongitude(longitude != null ? longitude : 0.0);
+                s.setDateSignalement(dateSignalement);
+
+                // Gérer le statut
+                String finalStatutNom = (statutNom != null) ? statutNom.toLowerCase() : "nouveau";
+                s.setStatut(statutRepository.findByNom(finalStatutNom)
+                        .orElseGet(() -> {
+                            var newStatut = new com.cloud.identity.entities.StatutsSignalement();
+                            newStatut.setNom(finalStatutNom);
+                            return statutRepository.save(newStatut);
+                        }));
+
+                // Gérer l'utilisateur
+                final String finalEmail = email;
+                s.setUtilisateur(utilisateurRepository.findByEmail(finalEmail)
+                        .orElseGet(() -> {
+                            var newUser = new com.cloud.identity.entities.Utilisateur();
+                            newUser.setEmail(finalEmail);
+                            newUser.setMotDePasse("default_password");
+                            return utilisateurRepository.save(newUser);
+                        }));
+
+                s = signalementRepository.save(s);
+
+                // Détails
+                SignalementsDetail details = new SignalementsDetail();
+                details.setSignalement(s);
+                details.setDescription(description);
+                details.setSurfaceM2(surfaceM2);
+                details.setBudget(budget);
+                details.setEntrepriseConcerne(entrepriseConcerne);
+                details.setPhotoUrl(photoUrl);
+                
+                s.setDetails(details);
+                detailsRepository.save(details);
+
+                syncedSignalements++;
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la synchronisation Firestore -> Postgres : " + e.getMessage());
+        }
+
+        Map<String, Integer> result = new HashMap<>();
+        result.put("signalements", syncedSignalements);
+        return result;
+    }
+
+    private Double getAsDouble(DocumentSnapshot doc, String field) {
+        Object val = doc.get(field);
+        if (val instanceof Double) return (Double) val;
+        if (val instanceof Long) return ((Long) val).doubleValue();
+        if (val instanceof Integer) return ((Integer) val).doubleValue();
+        if (val instanceof String && !((String) val).isEmpty()) {
+            try {
+                return Double.valueOf((String) val);
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
 
     /**
      * Crée un nouveau signalement dans Firestore à partir d'un signalement PostgreSQL.
@@ -39,10 +189,18 @@ public class FirestoreSyncService {
 
             if (details != null) {
                 data.put("description", details.getDescription());
+                
+                // Write both camelCase and snake_case for compatibility
                 data.put("surfaceM2", details.getSurfaceM2());
+                data.put("surface_m2", details.getSurfaceM2());
+                
                 data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
+                
                 data.put("entrepriseConcerne", details.getEntrepriseConcerne());
+                data.put("entreprise_concerne", details.getEntrepriseConcerne());
+                
                 data.put("photoUrl", details.getPhotoUrl());
+                data.put("photo_url", details.getPhotoUrl());
             }
 
             // Ajouter à Firestore et récupérer l'ID généré

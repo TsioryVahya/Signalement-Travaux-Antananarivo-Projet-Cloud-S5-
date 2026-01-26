@@ -16,6 +16,10 @@ export class SignalementService {
     return this.http.get<Signalement[]>(this.apiUrl);
   }
 
+  syncData(): Observable<any> {
+    return this.http.post(`${this.apiUrl}/sync`, {});
+  }
+
   getAllStatuses(): Observable<StatutSignalement[]> {
     return this.http.get<StatutSignalement[]>(this.statusUrl);
   }

@@ -12,7 +12,7 @@ import java.util.UUID;
 @JsonIgnoreProperties({ "hibernateLazyInitializer", "handler" })
 public class Signalement {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "id", nullable = false)
     private UUID id;
 
@@ -36,6 +36,17 @@ public class Signalement {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
+
+    @OneToOne(mappedBy = "signalement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private SignalementsDetail details;
+
+    public SignalementsDetail getDetails() {
+        return details;
+    }
+
+    public void setDetails(SignalementsDetail details) {
+        this.details = details;
+    }
 
     public UUID getId() {
         return id;

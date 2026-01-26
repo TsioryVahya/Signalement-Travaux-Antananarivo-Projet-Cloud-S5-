@@ -17,8 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class SignalementService {
@@ -38,8 +40,54 @@ public class SignalementService {
     @Autowired
     private FirestoreSyncService firestoreSyncService;
 
-    public List<Signalement> getAllSignalements() {
-        return signalementRepository.findAll();
+    public Map<String, Integer> synchroniserDonnees() {
+        return firestoreSyncService.syncFromFirestoreToPostgres();
+    }
+
+    @Transactional(readOnly = true)
+    public List<SignalementDTO> getAllSignalements() {
+        return signalementRepository.findAllWithDetails().stream().map(s -> {
+            SignalementDTO dto = new SignalementDTO();
+            dto.setPostgresId(s.getId().toString());
+            dto.setLatitude(s.getLatitude());
+            dto.setLongitude(s.getLongitude());
+            dto.setIdFirebase(s.getIdFirebase());
+            dto.setDateSignalement(s.getDateSignalement());
+            
+            // On renvoie le NOM du statut pour le dashboard web
+            if (s.getStatut() != null) {
+                dto.setStatut(s.getStatut().getNom());
+            } else {
+                dto.setStatut("nouveau");
+            }
+
+            // Récupérer les détails via la relation fetchée ou fallback repository
+            SignalementsDetail d = s.getDetails();
+            if (d == null) {
+                // Fallback si la relation n'est pas chargée (peut arriver selon l'état de l'entité)
+                d = detailsRepository.findBySignalement(s).orElse(null);
+            }
+
+            if (d != null) {
+                System.out.println("🔍 Signalement " + s.getId() + " - Description trouvée: " + d.getDescription());
+                dto.setDescription(d.getDescription());
+                dto.setSurfaceM2(d.getSurfaceM2());
+                dto.setBudget(d.getBudget());
+                dto.setEntrepriseConcerne(d.getEntrepriseConcerne());
+                dto.setPhotoUrl(d.getPhotoUrl());
+            } else {
+                System.out.println("⚠️ Aucun détail trouvé pour le signalement : " + s.getId());
+            }
+
+            // Récupérer l'utilisateur si disponible
+            if (s.getUtilisateur() != null) {
+                SignalementDTO.UtilisateurDTO userDto = new SignalementDTO.UtilisateurDTO();
+                userDto.setEmail(s.getUtilisateur().getEmail());
+                dto.setUtilisateur(userDto);
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     public Optional<Signalement> getSignalementById(UUID id) {
@@ -91,6 +139,7 @@ public class SignalementService {
         details.setBudget(budget);
         details.setEntrepriseConcerne(entrepriseConcerne);
         details.setPhotoUrl(photoUrl);
+        s.setDetails(details);
         detailsRepository.save(details);
         System.out.println("✅ Détails sauvegardés.");
 
@@ -136,6 +185,7 @@ public class SignalementService {
         details.setEntrepriseConcerne(entrepriseConcerne);
         details.setPhotoUrl(photoUrl);
         
+        s.setDetails(details);
         detailsRepository.save(details);
 
         // Synchronisation Firebase
@@ -168,7 +218,12 @@ public class SignalementService {
         
         if (dto.getDateSignalement() != null) {
             try {
-                s.setDateSignalement(Instant.parse(dto.getDateSignalement()));
+                Object dateObj = dto.getDateSignalement();
+                if (dateObj instanceof com.google.cloud.Timestamp) {
+                    s.setDateSignalement(((com.google.cloud.Timestamp) dateObj).toSqlTimestamp().toInstant());
+                } else {
+                    s.setDateSignalement(Instant.parse(dateObj.toString()));
+                }
             } catch (Exception e) {
                 System.err.println("Erreur lors du parsing de la date : " + dto.getDateSignalement() + ". Utilisation de la date actuelle.");
                 s.setDateSignalement(Instant.now());
@@ -188,11 +243,19 @@ public class SignalementService {
         s.setStatut(statut);
 
         // Gérer l'utilisateur
+        String email = null;
         if (dto.getUtilisateur() != null && dto.getUtilisateur().getEmail() != null) {
-            Utilisateur utilisateur = utilisateurRepository.findByEmail(dto.getUtilisateur().getEmail())
+            email = dto.getUtilisateur().getEmail();
+        } else if (dto.getEmail() != null) {
+            email = dto.getEmail();
+        }
+
+        if (email != null) {
+            final String finalEmail = email;
+            Utilisateur utilisateur = utilisateurRepository.findByEmail(finalEmail)
                     .orElseGet(() -> {
                         Utilisateur newUser = new Utilisateur();
-                        newUser.setEmail(dto.getUtilisateur().getEmail());
+                        newUser.setEmail(finalEmail);
                         newUser.setMotDePasse("default_password");
                         return utilisateurRepository.save(newUser);
                     });
@@ -205,7 +268,15 @@ public class SignalementService {
         SignalementsDetail details = new SignalementsDetail();
         details.setSignalement(s);
         details.setDescription(dto.getDescription());
-        details.setSurfaceM2(dto.getSurfaceM2());
+        
+        // Gestion de la surface (peut être Long ou Double dans Firestore)
+        if (dto.getSurfaceM2() != null) {
+            try {
+                details.setSurfaceM2(Double.valueOf(dto.getSurfaceM2().toString()));
+            } catch (Exception e) {
+                System.err.println("Erreur conversion surfaceM2 : " + dto.getSurfaceM2());
+            }
+        }
         
         // Gestion du budget (peut être String ou Number)
         if (dto.getBudget() != null) {
@@ -219,6 +290,7 @@ public class SignalementService {
         details.setEntrepriseConcerne(dto.getEntrepriseConcerne());
         details.setPhotoUrl(dto.getPhotoUrl());
 
+        s.setDetails(details);
         detailsRepository.save(details);
         System.out.println("Signalement " + dto.getIdFirebase() + " enregistré avec succès dans Postgres.");
     }

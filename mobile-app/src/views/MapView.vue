@@ -108,8 +108,19 @@
               <textarea v-model="reportDescription" rows="2" placeholder="Ex: Nid de poule profond, route inondée..." class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 text-sm resize-none"></textarea>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Photo URL (Optionnel)</label>
-              <input v-model="reportPhotoUrl" type="text" placeholder="https://..." class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-slate-700 text-sm">
+              <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Photo</label>
+              <div v-if="!reportPhotoUrl" @click="takePhoto" class="w-full h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer hover:bg-slate-100 hover:border-blue-200 transition-colors">
+                <ion-icon :icon="cameraOutline" class="text-3xl" />
+                <span class="text-xs font-bold">Prendre une photo</span>
+              </div>
+              <div v-else class="relative w-full h-48 rounded-xl overflow-hidden group">
+                <img :src="reportPhotoUrl" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                   <button @click="removePhoto" class="bg-red-500 text-white p-3 rounded-full shadow-lg transform hover:scale-110 transition-transform">
+                     <ion-icon :icon="trashOutline" class="text-xl" />
+                   </button>
+                </div>
+              </div>
             </div>
             <div class="flex gap-3">
               <button @click="newSignalementPoint = null" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl active:scale-95 transition-all">Annuler</button>
@@ -130,6 +141,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { IonPage, IonContent, IonIcon } from '@ionic/vue';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { 
   logOutOutline, 
   personOutline, 
@@ -138,7 +150,9 @@ import {
   sendOutline, 
   trailSignOutline,
   eyeOutline,
-  locationOutline
+  locationOutline,
+  cameraOutline,
+  trashOutline
 } from 'ionicons/icons';
 import * as L from 'leaflet';
 import { db, auth } from '../firebase/config';
@@ -159,6 +173,7 @@ const isAuthLoading = ref(false);
 // Signalement State
 const newSignalementPoint = ref<{lat: number, lng: number} | null>(null);
 const reportDescription = ref('');
+const reportPhotoUrl = ref('');
 const isSubmitting = ref(false);
 
 let map: L.Map | null = null;
@@ -172,6 +187,29 @@ const filteredSignalements = computed(() => {
 });
 
 // Auth Methods
+const takePhoto = async () => {
+  console.log('Tentative de prise de photo...');
+  try {
+    const photo = await Camera.getPhoto({
+      quality: 70,
+      allowEditing: false,
+      resultType: CameraResultType.Base64,
+      source: CameraSource.Prompt
+    });
+    
+    console.log('Photo reçue:', photo.format);
+    if (photo.base64String) {
+      reportPhotoUrl.value = `data:image/jpeg;base64,${photo.base64String}`;
+    }
+  } catch (e) {
+    console.error('Erreur Camera:', e);
+  }
+};
+
+const removePhoto = () => {
+  reportPhotoUrl.value = '';
+};
+
 const handleLogin = async () => {
   if (!loginEmail.value || !loginPassword.value) {
     authError.value = "Veuillez remplir tous les champs";
@@ -234,33 +272,24 @@ const submitReport = async () => {
   
   isSubmitting.value = true;
   try {
-    await addDoc(collection(db, 'signalements'), {
+    const reportData = {
       latitude: newSignalementPoint.value.lat,
       longitude: newSignalementPoint.value.lng,
       description: reportDescription.value,
+      photo_url: reportPhotoUrl.value,
       email: store.user.email,
-      statut: 'Nouveau',
+      statut: 'nouveau',
       dateSignalement: new Date().toISOString(),
       createdAt: serverTimestamp()
-    });
+    };
 
-    // Backend Sync (Try-catch to not block UI)
-    try {
-      await fetch('http://localhost:8081/api/signalements', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          latitude: newSignalementPoint.value.lat,
-          longitude: newSignalementPoint.value.lng,
-          description: reportDescription.value,
-          email: store.user.email,
-          statutId: 'STATUT_NOUVEAU'
-        })
-      });
-    } catch (e) { console.warn("Sync backend failed"); }
+    const docRef = await addDoc(collection(db, 'signalements'), reportData);
+
+    
 
     newSignalementPoint.value = null;
     reportDescription.value = '';
+    reportPhotoUrl.value = '';
   } catch (err) {
     console.error(err);
   } finally {
@@ -298,12 +327,14 @@ const updateMarkers = () => {
       const m = L.marker([s.latitude, s.longitude])
         .addTo(map!)
         .bindPopup(`
-          <div class="p-2 min-w-[120px]">
+          <div class="p-2 min-w-[160px]">
             <div class="text-[10px] font-bold uppercase mb-1" style="color: ${getStatusTextColor(s.statut)}">${s.statut}</div>
-            <div class="font-bold text-slate-800 text-sm">${s.description || 'Signalement'}</div>
-            <div class="text-[10px] text-slate-400 mt-1 flex justify-between">
+            ${s.photo_url ? `<div class="w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100"><img src="${s.photo_url}" class="w-full h-full object-cover"></div>` : ''}
+            <div class="font-bold text-slate-800 text-sm mb-1">${s.description || 'Signalement'}</div>
+            ${s.entreprise_concerne ? `<div class="text-[9px] text-slate-500 italic mb-1">Par: ${s.entreprise_concerne}</div>` : ''}
+            <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-50 flex justify-between">
               <span>${formatDate(s.dateSignalement)}</span>
-              <span>${s.email === store.user?.email ? 'Moi' : ''}</span>
+              <span class="font-bold text-blue-600">${s.email === store.user?.email ? 'Moi' : ''}</span>
             </div>
           </div>
         `);
