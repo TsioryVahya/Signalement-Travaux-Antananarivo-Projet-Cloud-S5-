@@ -7,6 +7,7 @@ import * as L from 'leaflet';
 import { SignalementService } from '../../services/signalement.service';
 import { Signalement } from '../../models/signalement.model';
 import { AuthService } from '../../services/auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-map',
@@ -35,12 +36,27 @@ export class MapComponent implements OnInit, AfterViewInit {
   public selectedSignalement: Signalement | null = null;
   public isPanelOpen = false;
   public isLoading = true;
+  public isUpdatingStatus = false;
   public searchQuery = '';
   public activeFilters: Set<string> = new Set(['nouveau', 'en cours', 'terminé']);
+  public searchSuggestions: Signalement[] = [];
+  public showSuggestions = false;
+  
+  private readonly INITIAL_CENTER: L.LatLngExpression = [-18.8792, 47.5079];
+  private readonly INITIAL_ZOOM = 13;
   
   private markersMap: Map<string, L.Marker> = new Map();
   private signalementService = inject(SignalementService);
   public authService = inject(AuthService);
+  private router = inject(Router);
+
+  @HostListener('document:click', ['$event'])
+  onClickOutside(event: Event) {
+    const searchBar = document.querySelector('.relative.pointer-events-auto');
+    if (searchBar && !searchBar.contains(event.target as Node)) {
+      this.showSuggestions = false;
+    }
+  }
 
   @HostListener('window:resize', ['$event'])
   onResize() {
@@ -63,12 +79,10 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   private initMap(): void {
-    const tana = { lat: -18.8792, lng: 47.5079 };
-
     this.map = L.map('map', {
       zoomControl: false,
       attributionControl: false
-    }).setView([tana.lat, tana.lng], 13);
+    }).setView(this.INITIAL_CENTER, this.INITIAL_ZOOM);
 
     L.tileLayer('http://localhost:8082/styles/basic-preview/{z}/{x}/{y}.png', {
       maxZoom: 20
@@ -88,7 +102,25 @@ export class MapComponent implements OnInit, AfterViewInit {
   }
 
   public onSearchChange(): void {
+    if (this.searchQuery.length > 1) {
+      this.searchSuggestions = this.signalements
+        .filter(s => 
+          s.description?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
+          s.id?.toString().includes(this.searchQuery)
+        )
+        .slice(0, 5); // Limit to 5 suggestions
+      this.showSuggestions = this.searchSuggestions.length > 0;
+    } else {
+      this.searchSuggestions = [];
+      this.showSuggestions = false;
+    }
     this.applyFiltersAndSearch();
+  }
+
+  public selectSuggestion(s: Signalement): void {
+    this.searchQuery = s.description || s.id || '';
+    this.showSuggestions = false;
+    this.selectSignalement(s);
   }
 
   private applyFiltersAndSearch(): void {
@@ -137,6 +169,14 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.isPanelOpen = false;
     this.selectedSignalement = null;
     this.markersMap.forEach(m => m.getElement()?.classList.remove('marker-selected'));
+    
+    // Reset map view to initial state
+    if (this.map) {
+      this.map.flyTo(this.INITIAL_CENTER, this.INITIAL_ZOOM, {
+        duration: 1.5,
+        easeLinearity: 0.25
+      });
+    }
   }
 
   private createCustomIcon(color: string, isSelected: boolean = false): L.DivIcon {
@@ -215,11 +255,73 @@ export class MapComponent implements OnInit, AfterViewInit {
     this.map.invalidateSize();
   }
 
+  public logout(): void {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
+
   public getStatusColor(status: string): string {
     const st = String(status || '').toLowerCase();
     if (st.includes('nouveau')) return '#3b82f6';
     if (st.includes('cours')) return '#f59e0b';
     if (st.includes('termin')) return '#10b981';
     return '#64748b';
+  }
+
+  public getNextStatusLabel(): string {
+    const current = this.selectedSignalement?.statut.toLowerCase() || '';
+    if (current.includes('nouveau')) return 'Passer en cours';
+    if (current.includes('cours')) return 'Marquer comme terminé';
+    return '';
+  }
+
+  public updateStatus(): void {
+    if (!this.selectedSignalement || !this.selectedSignalement.id || this.isUpdatingStatus) return;
+
+    const id = this.selectedSignalement.id;
+    const current = this.selectedSignalement.statut.toLowerCase();
+    let nextStatus = '';
+
+    if (current.includes('nouveau')) nextStatus = 'En cours';
+    else if (current.includes('cours')) nextStatus = 'Terminé';
+    else return; // Déjà terminé ou inconnu
+
+    this.isUpdatingStatus = true;
+    
+    // On prépare l'objet de mise à jour. On ne change que le statut.
+    const updateData = { ...this.selectedSignalement, statut: nextStatus };
+
+    this.signalementService.updateSignalement(id, updateData).subscribe({
+      next: () => {
+        if (this.selectedSignalement) {
+          this.selectedSignalement.statut = nextStatus;
+          
+          // Mettre à jour dans la liste principale pour la synchronisation des filtres/marqueurs
+          const index = this.signalements.findIndex(s => s.id === id);
+          if (index !== -1) {
+            this.signalements[index].statut = nextStatus;
+            
+            // Mettre à jour le marqueur visuellement
+            const marker = this.markersMap.get(id);
+            if (marker) {
+              const color = this.getStatusColor(nextStatus);
+              marker.setIcon(this.createCustomIcon(color, true));
+              marker.setPopupContent(`
+                <div class="p-3 font-sans">
+                  <p class="text-xs font-black text-slate-800 uppercase mb-1">${nextStatus}</p>
+                  <p class="text-[10px] text-slate-500">${new Date(this.selectedSignalement.dateSignalement).toLocaleDateString()}</p>
+                </div>
+              `);
+            }
+          }
+        }
+        this.isUpdatingStatus = false;
+        this.applyFiltersAndSearch();
+      },
+      error: (err) => {
+        console.error('Erreur lors de la mise à jour du statut:', err);
+        this.isUpdatingStatus = false;
+      }
+    });
   }
 }

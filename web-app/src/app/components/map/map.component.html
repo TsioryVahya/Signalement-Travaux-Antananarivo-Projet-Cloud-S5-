@@ -1,56 +1,85 @@
 <div class="relative h-screen w-full overflow-hidden font-sans bg-slate-950">
   <!-- Top Floating Search Bar -->
   <div class="absolute top-6 left-1/2 -translate-x-1/2 z-[1001] w-full max-w-xl px-4 pointer-events-none">
-    <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 p-1.5 flex items-center gap-2 pointer-events-auto transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-white/95">
-      <div class="pl-4 text-slate-400">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+    <div class="relative pointer-events-auto">
+      <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/40 p-1.5 flex items-center gap-2 transition-all focus-within:ring-2 focus-within:ring-blue-500/20 focus-within:bg-white/95">
+        <div class="pl-4 text-slate-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input type="text" 
+               [(ngModel)]="searchQuery"
+               (ngModelChange)="onSearchChange()"
+               (focus)="showSuggestions = searchQuery.length > 1"
+               placeholder="Rechercher un signalement (ID, description...)" 
+               class="bg-transparent border-none focus:ring-0 text-slate-700 placeholder:text-slate-400 w-full font-medium py-2.5">
+        
+        <div class="pr-1.5">
+          <div class="bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg shadow-blue-500/30">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Autocomplete Suggestions -->
+      <div *ngIf="showSuggestions" 
+           @fadeIn
+           class="absolute top-full left-0 right-0 mt-2 bg-white/90 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/40 overflow-hidden z-[1002]">
+        <div class="py-2">
+          <button *ngFor="let s of searchSuggestions" 
+                  (click)="selectSuggestion(s)"
+                  class="w-full px-6 py-3.5 flex items-start gap-4 hover:bg-blue-50 transition-colors text-left group border-b border-slate-50 last:border-none">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors">
+              <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between mb-0.5">
+                <span class="text-[10px] font-black text-blue-600 uppercase tracking-widest">ID: #{{ s.id }}</span>
+                <span class="text-[10px] text-slate-400 font-bold uppercase">{{ s.statut }}</span>
+              </div>
+              <p class="text-sm font-bold text-slate-700 truncate group-hover:text-slate-900">{{ s.description || 'Aucune description' }}</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Right Auth Actions -->
+  <div class="absolute top-6 right-6 z-[1001] flex items-center gap-3">
+    <!-- User Profile / Logout (If logged in) -->
+    <div *ngIf="authService.isLoggedIn()" class="flex items-center gap-3">
+      <div class="hidden md:flex flex-col items-end">
+        <span class="text-[10px] font-black text-white/60 uppercase tracking-widest">Connecté</span>
+        <span class="text-xs font-bold text-white">{{ authService.getCurrentUser()?.email }}</span>
+      </div>
+      <button (click)="logout()" 
+              class="w-12 h-12 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center text-white hover:bg-white/20 transition-all group shadow-xl"
+              title="Se déconnecter">
+        <svg class="w-6 h-6 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Login Button (If not logged in) -->
+    <a *ngIf="!authService.isLoggedIn()" 
+       routerLink="/login"
+       class="flex items-center gap-3 px-6 py-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white hover:bg-white/20 transition-all group shadow-xl">
+      <span class="text-sm font-black uppercase tracking-widest">Connexion</span>
+      <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/30">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
         </svg>
       </div>
-      <input type="text" 
-             [(ngModel)]="searchQuery"
-             (ngModelChange)="onSearchChange()"
-             placeholder="Rechercher un signalement (ID, description...)" 
-             class="bg-transparent border-none focus:ring-0 text-slate-700 placeholder:text-slate-400 w-full font-medium py-2.5">
-      
-      <div class="pr-1.5">
-        <div class="bg-blue-600 text-white p-2.5 rounded-2xl shadow-lg shadow-blue-500/30">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-          </svg>
-        </div>
-      </div>
-    </div>
+    </a>
   </div>
 
-  <!-- Left Side Header (Logo/User) -->
-  <div class="absolute top-6 left-6 z-[1001] flex flex-col gap-3 pointer-events-none">
-    <!-- Title Card -->
-    <div class="bg-slate-900/90 backdrop-blur-md px-6 py-4 rounded-3xl shadow-2xl border border-white/10 pointer-events-auto transition-all hover:scale-[1.02] group">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/40 group-hover:rotate-6 transition-transform">
-          <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-xl font-black text-white leading-none tracking-tight">TanaWatch</h1>
-          <p class="text-[10px] text-blue-400 font-bold uppercase tracking-[0.2em] mt-1">Smart Road Monitoring</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- User Status -->
-    <div class="bg-white/80 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border border-white/50 pointer-events-auto flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center overflow-hidden">
-        <div class="text-xs font-black text-slate-400">{{ authService.getCurrentUser()?.email?.substring(0,2)?.toUpperCase() }}</div>
-      </div>
-      <div class="pr-4">
-        <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest leading-none mb-0.5">Manager</p>
-        <p class="text-xs font-bold text-slate-800 max-w-[120px] truncate">{{ authService.getCurrentUser()?.email }}</p>
-      </div>
-    </div>
-  </div>
 
   <!-- Bottom Legend (Interactive Filters) -->
   <div class="absolute bottom-8 left-1/2 -translate-x-1/2 z-[1001] bg-slate-900/90 backdrop-blur-xl p-2.5 rounded-[2.5rem] shadow-2xl border border-white/10 pointer-events-auto flex items-center gap-2">
@@ -82,7 +111,7 @@
   <!-- Right Side Detail Panel -->
   <div *ngIf="isPanelOpen" 
        @panelSlide
-       class="absolute top-4 right-4 bottom-4 z-[1002] w-full max-w-md bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[-20px_0_50px_-15px_rgba(0,0,0,0.3)] border border-white/40 flex flex-col overflow-hidden">
+       class="absolute top-4 right-4 bottom-4 z-[1002] w-full max-w-sm bg-white/90 backdrop-blur-2xl rounded-[2.5rem] shadow-[-20px_0_50px_-15px_rgba(0,0,0,0.3)] border border-white/40 flex flex-col overflow-hidden">
     
     <!-- Panel Header -->
     <div class="p-8 pb-4">
@@ -163,47 +192,28 @@
           </p>
         </div>
       </section>
+    </div>
 
-      <!-- AI Analysis Section -->
-      <section>
-        <div class="flex items-center justify-between mb-4">
-          <div class="flex items-center gap-2">
-            <div class="w-1.5 h-5 bg-purple-600 rounded-full"></div>
-            <h3 class="text-xs font-black text-slate-800 uppercase tracking-widest">Analyse IA Technique</h3>
-          </div>
-          <span class="px-2 py-0.5 rounded-md bg-purple-50 text-[9px] font-black text-purple-600 border border-purple-100 uppercase tracking-widest">Beta</span>
-        </div>
-        
-        <!-- AI Skeleton or Content -->
-        <div class="bg-gradient-to-br from-purple-50 to-indigo-50 p-6 rounded-3xl border border-purple-100/50 relative overflow-hidden">
-          <div class="absolute top-0 right-0 p-4 opacity-10">
-            <svg class="w-16 h-16 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-          </div>
-          
-          <div class="relative space-y-4">
-            <div class="flex items-start gap-3">
-              <div class="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-purple-500/30">
-                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                </svg>
-              </div>
-              <div>
-                <p class="text-xs font-black text-purple-900 uppercase tracking-wider mb-1">Recommandation</p>
-                <p class="text-sm text-slate-700 font-medium leading-relaxed">
-                  L'analyse des données suggère une intervention de type <b>Réfection de Couche de Roulement</b>. Urgence : 72h pour prévenir une dégradation structurelle.
-                </p>
-              </div>
-            </div>
-            
-            <div class="pt-4 flex gap-2">
-              <button class="flex-1 bg-white hover:bg-slate-50 text-slate-900 py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-sm transition-all border border-slate-200">Générer Devis</button>
-              <button class="flex-1 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-purple-500/30 transition-all">Assigner Équipe</button>
-            </div>
-          </div>
-        </div>
-      </section>
+    <!-- Status Change Action -->
+    <div *ngIf="selectedSignalement && selectedSignalement.statut.toLowerCase() !== 'terminé'" 
+         class="px-8 pb-8 pt-4 bg-white/50 backdrop-blur-sm border-t border-slate-100">
+      <button (click)="updateStatus()" 
+              [disabled]="isUpdatingStatus"
+              class="w-full bg-slate-900 hover:bg-slate-800 disabled:bg-slate-400 text-white py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 transition-all flex items-center justify-center gap-3 group">
+        <span *ngIf="!isUpdatingStatus" class="flex items-center gap-3">
+          {{ getNextStatusLabel() }}
+          <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </span>
+        <span *ngIf="isUpdatingStatus" class="flex items-center gap-2">
+          <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Mise à jour...
+        </span>
+      </button>
     </div>
   </div>
 

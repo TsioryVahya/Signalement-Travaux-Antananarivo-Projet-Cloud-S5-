@@ -63,9 +63,9 @@ export class UserListComponent implements OnInit {
     this.newUser = {
       id: user.id,
       email: user.email,
-      motDePasse: '', // On ne récupère pas le mot de passe
-      role: { id: user.role.id },
-      statutActuel: { id: user.statutActuel.id }
+      motDePasse: '', 
+      role: { id: user.role?.id || (this.roles.length > 0 ? this.roles[0].id : 1) },
+      statutActuel: { id: user.statutActuel?.id || (this.statuts.length > 0 ? this.statuts[0].id : 1) }
     };
   }
 
