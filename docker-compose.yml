@@ -28,6 +28,9 @@ services:
   backend:
     build: ./backend-identity
     container_name: cloud-s5-backend
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "8081:8081"
     environment:
@@ -40,6 +43,9 @@ services:
   web:
     build: ./web-app
     container_name: cloud-s5-web
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     ports:
       - "4200:80"
     depends_on:
