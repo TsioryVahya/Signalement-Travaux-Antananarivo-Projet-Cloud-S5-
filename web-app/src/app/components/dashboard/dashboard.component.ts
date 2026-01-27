@@ -12,6 +12,7 @@ import { AuthService } from '../../services/auth.service';
 })
 export class DashboardComponent implements OnInit {
   userEmail: string | null = null;
+  isSidebarCollapsed = false;
 
   constructor(private authService: AuthService, private router: Router) {}
 
@@ -20,6 +21,10 @@ export class DashboardComponent implements OnInit {
     if (user) {
       this.userEmail = user.email;
     }
+  }
+
+  toggleSidebar(): void {
+    this.isSidebarCollapsed = !this.isSidebarCollapsed;
   }
 
   logout(): void {
