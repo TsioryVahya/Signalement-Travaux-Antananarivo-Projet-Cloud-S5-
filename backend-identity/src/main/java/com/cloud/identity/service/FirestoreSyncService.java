@@ -38,6 +38,9 @@ public class FirestoreSyncService {
     @Autowired
     private StatutUtilisateurRepository statutUtilisateurRepository;
 
+    @Autowired
+    private EntrepriseRepository entrepriseRepository;
+
     /**
      * Synchronise les utilisateurs de Firestore vers PostgreSQL.
      */
@@ -225,7 +228,18 @@ public class FirestoreSyncService {
                 details.setDescription(description);
                 details.setSurfaceM2(surfaceM2);
                 details.setBudget(budget);
-                details.setEntrepriseConcerne(entrepriseConcerne);
+                
+                if (entrepriseConcerne != null && !entrepriseConcerne.isEmpty()) {
+                    final String entNom = entrepriseConcerne;
+                    com.cloud.identity.entities.Entreprise entreprise = entrepriseRepository.findByNom(entNom)
+                            .orElseGet(() -> {
+                                com.cloud.identity.entities.Entreprise e = new com.cloud.identity.entities.Entreprise();
+                                e.setNom(entNom);
+                                return entrepriseRepository.save(e);
+                            });
+                    details.setEntreprise(entreprise);
+                }
+                
                 details.setPhotoUrl(photoUrl);
                 
                 s.setDetails(details);
@@ -287,8 +301,10 @@ public class FirestoreSyncService {
                 
                 data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
                 
-                data.put("entrepriseConcerne", details.getEntrepriseConcerne());
-                data.put("entreprise_concerne", details.getEntrepriseConcerne());
+                if (details.getEntreprise() != null) {
+                    data.put("entrepriseConcerne", details.getEntreprise().getNom());
+                    data.put("entreprise_concerne", details.getEntreprise().getNom());
+                }
                 
                 data.put("photoUrl", details.getPhotoUrl());
                 data.put("photo_url", details.getPhotoUrl());

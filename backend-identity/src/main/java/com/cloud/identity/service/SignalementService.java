@@ -2,10 +2,12 @@ package com.cloud.identity.service;
 
 
 import com.cloud.identity.dto.SignalementDTO;
+import com.cloud.identity.entities.Entreprise;
 import com.cloud.identity.entities.Signalement;
 import com.cloud.identity.entities.SignalementsDetail;
 import com.cloud.identity.entities.StatutsSignalement;
 import com.cloud.identity.entities.Utilisateur;
+import com.cloud.identity.repository.EntrepriseRepository;
 import com.cloud.identity.repository.SignalementRepository;
 import com.cloud.identity.repository.SignalementsDetailRepository;
 import com.cloud.identity.repository.StatutsSignalementRepository;
@@ -33,6 +35,9 @@ public class SignalementService {
 
     @Autowired
     private StatutsSignalementRepository statutRepository;
+
+    @Autowired
+    private EntrepriseRepository entrepriseRepository;
 
     @Autowired
     private UtilisateurRepository utilisateurRepository;
@@ -73,7 +78,8 @@ public class SignalementService {
                 dto.setDescription(d.getDescription());
                 dto.setSurfaceM2(d.getSurfaceM2());
                 dto.setBudget(d.getBudget());
-                dto.setEntrepriseConcerne(d.getEntrepriseConcerne());
+                dto.setEntrepriseId(d.getEntreprise() != null ? d.getEntreprise().getId() : null);
+                dto.setEntrepriseNom(d.getEntreprise() != null ? d.getEntreprise().getNom() : null);
                 dto.setPhotoUrl(d.getPhotoUrl());
             } else {
                 System.out.println("⚠️ Aucun détail trouvé pour le signalement : " + s.getId());
@@ -100,65 +106,47 @@ public class SignalementService {
 
     @Transactional
     public void creerSignalement(Double latitude, Double longitude, String description, String email,
-                                 Double surfaceM2, BigDecimal budget, String entrepriseConcerne, String photoUrl) {
-        System.out.println("📝 Création d'un signalement pour : " + email);
+                                 Double surfaceM2, BigDecimal budget, String entrepriseNom, String photoUrl) throws Exception {
+        Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
+
+        StatutsSignalement statut = statutRepository.findByNom("nouveau")
+                .orElseThrow(() -> new Exception("Statut par défaut non trouvé"));
+
         Signalement s = new Signalement();
         s.setLatitude(latitude);
         s.setLongitude(longitude);
-        s.setDateSignalement(java.time.Instant.now());
-        
-        // Statut par défaut
-        StatutsSignalement statut = statutRepository.findByNom("nouveau")
-                .orElseGet(() -> {
-                    System.out.println("ℹ️ Statut 'nouveau' non trouvé, création...");
-                    StatutsSignalement newStatut = new StatutsSignalement();
-                    newStatut.setNom("nouveau");
-                    return statutRepository.save(newStatut);
-                });
         s.setStatut(statut);
-
-        // Utilisateur
-        Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
-                .orElseGet(() -> {
-                    System.out.println("ℹ️ Utilisateur non trouvé, création : " + email);
-                    Utilisateur newUser = new Utilisateur();
-                    newUser.setEmail(email);
-                    newUser.setMotDePasse("default_password");
-                    return utilisateurRepository.save(newUser);
-                });
         s.setUtilisateur(utilisateur);
+        s.setDateSignalement(Instant.now());
 
-        s = signalementRepository.save(s);
-        System.out.println("✅ Signalement sauvegardé dans Postgres, ID : " + s.getId());
+        signalementRepository.save(s);
 
-        // Détails
         SignalementsDetail details = new SignalementsDetail();
         details.setSignalement(s);
         details.setDescription(description);
         details.setSurfaceM2(surfaceM2);
         details.setBudget(budget);
-        details.setEntrepriseConcerne(entrepriseConcerne);
-        details.setPhotoUrl(photoUrl);
-        s.setDetails(details);
-        detailsRepository.save(details);
-        System.out.println("✅ Détails sauvegardés.");
-
-        // Synchronisation vers Firestore
-        System.out.println("🔄 Tentative de synchronisation vers Firestore...");
-        String firebaseId = firestoreSyncService.createSignalementInFirestore(s, details);
-        if (firebaseId != null) {
-            s.setIdFirebase(firebaseId);
-            signalementRepository.save(s);
-            System.out.println("🚀 Synchronisation réussie ! ID Firebase : " + firebaseId);
-        } else {
-            System.err.println("❌ ÉCHEC de la synchronisation Firestore.");
+        
+        if (entrepriseNom != null && !entrepriseNom.isEmpty()) {
+            Entreprise entreprise = entrepriseRepository.findByNom(entrepriseNom)
+                    .orElseGet(() -> {
+                        Entreprise e = new Entreprise();
+                        e.setNom(entrepriseNom);
+                        return entrepriseRepository.save(e);
+                    });
+            details.setEntreprise(entreprise);
         }
+        
+        details.setPhotoUrl(photoUrl);
+        
+        detailsRepository.save(details);
     }
 
     @Transactional
     public void modifierSignalement(UUID id, Double latitude, Double longitude, Integer statutId,
                                     String description, Double surfaceM2, BigDecimal budget,
-                                    String entrepriseConcerne, String photoUrl) throws Exception {
+                                    String entrepriseNom, String photoUrl) throws Exception {
         Signalement s = signalementRepository.findById(id)
                 .orElseThrow(() -> new Exception("Signalement non trouvé"));
         
@@ -182,7 +170,19 @@ public class SignalementService {
         details.setDescription(description);
         details.setSurfaceM2(surfaceM2);
         details.setBudget(budget);
-        details.setEntrepriseConcerne(entrepriseConcerne);
+        
+        if (entrepriseNom != null && !entrepriseNom.isEmpty()) {
+            Entreprise entreprise = entrepriseRepository.findByNom(entrepriseNom)
+                    .orElseGet(() -> {
+                        Entreprise e = new Entreprise();
+                        e.setNom(entrepriseNom);
+                        return entrepriseRepository.save(e);
+                    });
+            details.setEntreprise(entreprise);
+        } else {
+            details.setEntreprise(null);
+        }
+        
         details.setPhotoUrl(photoUrl);
         
         s.setDetails(details);
@@ -287,7 +287,17 @@ public class SignalementService {
             }
         }
         
-        details.setEntrepriseConcerne(dto.getEntrepriseConcerne());
+        if (dto.getEntrepriseNom() != null && !dto.getEntrepriseNom().isEmpty()) {
+            final String entNom = dto.getEntrepriseNom();
+            Entreprise entreprise = entrepriseRepository.findByNom(entNom)
+                    .orElseGet(() -> {
+                        Entreprise e = new Entreprise();
+                        e.setNom(entNom);
+                        return entrepriseRepository.save(e);
+                    });
+            details.setEntreprise(entreprise);
+        }
+        
         details.setPhotoUrl(dto.getPhotoUrl());
 
         s.setDetails(details);

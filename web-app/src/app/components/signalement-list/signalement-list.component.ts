@@ -14,6 +14,7 @@ import { Signalement, StatutSignalement } from '../../models/signalement.model';
 export class SignalementListComponent implements OnInit {
   signalements: Signalement[] = [];
   statuses: StatutSignalement[] = [];
+  entreprises: any[] = [];
   
   // Modal States
   showEditModal = false;
@@ -31,6 +32,7 @@ export class SignalementListComponent implements OnInit {
   ngOnInit(): void {
     this.loadSignalements();
     this.loadStatuses();
+    this.loadEntreprises();
   }
 
   loadSignalements(): void {
@@ -81,6 +83,13 @@ export class SignalementListComponent implements OnInit {
     });
   }
 
+  loadEntreprises(): void {
+    this.signalementService.getAllEntreprises().subscribe({
+      next: (data) => this.entreprises = data,
+      error: (err) => console.error(err)
+    });
+  }
+
   openEditModal(signalement: Signalement): void {
     // Trouver l'ID du statut correspondant au nom du statut
     const signalementStatut = String(signalement.statut || '').toLowerCase();
@@ -94,7 +103,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
-      entrepriseConcerne: signalement.entrepriseConcerne || ''
+      entrepriseConcerne: signalement.entrepriseNom || signalement.entrepriseConcerne || ''
     };
     this.showEditModal = true;
   }

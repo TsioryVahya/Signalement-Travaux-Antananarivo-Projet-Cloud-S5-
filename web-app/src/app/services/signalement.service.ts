@@ -9,11 +9,16 @@ import { Signalement, StatutSignalement } from '../models/signalement.model';
 export class SignalementService {
   private apiUrl = 'http://localhost:8081/api/signalements';
   private statusUrl = 'http://localhost:8081/api/statuts-signalement';
+  private entrepriseUrl = 'http://localhost:8081/api/entreprises';
 
   constructor(private http: HttpClient) {}
 
   getAllSignalements(): Observable<Signalement[]> {
     return this.http.get<Signalement[]>(this.apiUrl);
+  }
+
+  getAllEntreprises(): Observable<any[]> {
+    return this.http.get<any[]>(this.entrepriseUrl);
   }
 
   syncData(): Observable<any> {

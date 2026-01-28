@@ -9,8 +9,11 @@ public class SignalementDTO {
     @com.google.cloud.firestore.annotation.PropertyName("surface_m2")
     private Double surfaceM2;
     
-    @com.google.cloud.firestore.annotation.PropertyName("entreprise_concerne")
-    private String entrepriseConcerne;
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_id")
+    private Integer entrepriseId;
+
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_nom")
+    private String entrepriseNom;
 
     @com.google.cloud.firestore.annotation.PropertyName("id_firebase")
     private String idFirebase;
@@ -107,14 +110,24 @@ public class SignalementDTO {
         this.surfaceM2 = surfaceM2;
     }
 
-    @com.google.cloud.firestore.annotation.PropertyName("entreprise_concerne")
-    public String getEntrepriseConcerne() {
-        return entrepriseConcerne;
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_id")
+    public Integer getEntrepriseId() {
+        return entrepriseId;
     }
 
-    @com.google.cloud.firestore.annotation.PropertyName("entreprise_concerne")
-    public void setEntrepriseConcerne(String entrepriseConcerne) {
-        this.entrepriseConcerne = entrepriseConcerne;
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_id")
+    public void setEntrepriseId(Integer entrepriseId) {
+        this.entrepriseId = entrepriseId;
+    }
+
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_nom")
+    public String getEntrepriseNom() {
+        return entrepriseNom;
+    }
+
+    @com.google.cloud.firestore.annotation.PropertyName("entreprise_nom")
+    public void setEntrepriseNom(String entrepriseNom) {
+        this.entrepriseNom = entrepriseNom;
     }
 
     @com.google.cloud.firestore.annotation.PropertyName("id_firebase")

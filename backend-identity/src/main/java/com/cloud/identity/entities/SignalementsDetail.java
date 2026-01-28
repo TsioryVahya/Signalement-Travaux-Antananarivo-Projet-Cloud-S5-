@@ -29,8 +29,9 @@ public class SignalementsDetail {
     @Column(name = "budget", precision = 15, scale = 2)
     private BigDecimal budget;
 
-    @Column(name = "entreprise_concerne")
-    private String entrepriseConcerne;
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "entreprise_id")
+    private Entreprise entreprise;
 
     @Column(name = "photo_url", length = Integer.MAX_VALUE)
     private String photoUrl;
@@ -75,12 +76,12 @@ public class SignalementsDetail {
         this.budget = budget;
     }
 
-    public String getEntrepriseConcerne() {
-        return entrepriseConcerne;
+    public Entreprise getEntreprise() {
+        return entreprise;
     }
 
-    public void setEntrepriseConcerne(String entrepriseConcerne) {
-        this.entrepriseConcerne = entrepriseConcerne;
+    public void setEntreprise(Entreprise entreprise) {
+        this.entreprise = entreprise;
     }
 
     public String getPhotoUrl() {

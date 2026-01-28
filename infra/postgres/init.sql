@@ -90,6 +90,14 @@ CREATE TABLE signalements (
     utilisateur_id UUID REFERENCES utilisateurs(id)
 );
 
+-- Table des Entreprises
+CREATE TABLE entreprises (
+    id SERIAL PRIMARY KEY,
+    nom VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Table des Détails des Signalements (Informations techniques et médias)
 CREATE TABLE signalements_details (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -97,9 +105,10 @@ CREATE TABLE signalements_details (
     description TEXT,
     surface_m2 DOUBLE PRECISION,
     budget DECIMAL(15, 2),
-    entreprise_concerne VARCHAR(255),
+    entreprise_id INT REFERENCES entreprises(id),
     photo_url TEXT
 );
+
 
 -- Table Historique des Statuts de Signalement
 CREATE TABLE historique_signalement (
@@ -119,6 +128,10 @@ INSERT INTO configurations (cle, valeur, description) VALUES
 INSERT INTO roles (nom) VALUES ('UTILISATEUR'), ('MANAGER');
 INSERT INTO statuts_utilisateur (nom) VALUES ('ACTIF'), ('BLOQUE');
 INSERT INTO statuts_signalement (nom) VALUES ('nouveau'), ('en cours'), ('terminé');
+
+INSERT INTO entreprises (nom, description) VALUES 
+('Colas Madagascar', 'Entreprise de travaux publics spécialisée dans la construction de routes'),
+('Sogea-Satom', 'Acteur majeur du BTP en Afrique et à Madagascar');
 
 -- Insertion du compte Manager par défaut
 -- Mot de passe: manager123
