@@ -177,6 +177,7 @@ public class FirestoreSyncService {
                 
                 String entrepriseConcerne = document.getString("entrepriseConcerne");
                 if (entrepriseConcerne == null) entrepriseConcerne = document.getString("entreprise_concerne");
+                if (entrepriseConcerne == null) entrepriseConcerne = document.getString("entreprise");
                 
                 Object budgetObj = document.get("budget");
                 BigDecimal budget = null;
@@ -294,19 +295,13 @@ public class FirestoreSyncService {
 
             if (details != null) {
                 data.put("description", details.getDescription());
-                
-                // Write both camelCase and snake_case for compatibility
-                data.put("surfaceM2", details.getSurfaceM2());
                 data.put("surface_m2", details.getSurfaceM2());
-                
                 data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
                 
                 if (details.getEntreprise() != null) {
-                    data.put("entrepriseConcerne", details.getEntreprise().getNom());
-                    data.put("entreprise_concerne", details.getEntreprise().getNom());
+                    data.put("entreprise", details.getEntreprise().getNom());
                 }
                 
-                data.put("photoUrl", details.getPhotoUrl());
                 data.put("photo_url", details.getPhotoUrl());
             }
 
@@ -339,6 +334,20 @@ public class FirestoreSyncService {
             updates.put("postgresId", signalement.getId().toString());
             updates.put("latitude", signalement.getLatitude());
             updates.put("longitude", signalement.getLongitude());
+
+            if (signalement.getDetails() != null) {
+                updates.put("description", signalement.getDetails().getDescription());
+                updates.put("surface_m2", signalement.getDetails().getSurfaceM2());
+                updates.put("budget", signalement.getDetails().getBudget() != null ? signalement.getDetails().getBudget().toString() : null);
+                
+                if (signalement.getDetails().getEntreprise() != null) {
+                    updates.put("entreprise", signalement.getDetails().getEntreprise().getNom());
+                } else {
+                    updates.put("entreprise", null);
+                }
+                
+                updates.put("photo_url", signalement.getDetails().getPhotoUrl());
+            }
             
             // On met à jour le document Firebase correspondant
             firestore.collection("signalements")

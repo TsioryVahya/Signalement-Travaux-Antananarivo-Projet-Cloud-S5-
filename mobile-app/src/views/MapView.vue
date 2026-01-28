@@ -312,6 +312,7 @@ const submitReport = async () => {
       photo_url: reportPhotoUrl.value,
       email: store.user.email,
       statut: 'nouveau',
+      entreprise: null,
       dateSignalement: new Date().toISOString(),
       createdAt: serverTimestamp()
     };
@@ -364,7 +365,7 @@ const updateMarkers = () => {
             <div class="text-[10px] font-bold uppercase mb-1" style="color: ${getStatusTextColor(s.statut)}">${s.statut}</div>
             ${s.photo_url ? `<div class="w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100"><img src="${s.photo_url}" class="w-full h-full object-cover"></div>` : ''}
             <div class="font-bold text-slate-800 text-sm mb-1">${s.description || 'Signalement'}</div>
-            ${s.entreprise_concerne ? `<div class="text-[9px] text-slate-500 italic mb-1">Par: ${s.entreprise_concerne}</div>` : ''}
+            ${s.entreprise ? `<div class="text-[9px] text-blue-600 font-bold italic mb-1">Entreprise: ${s.entreprise}</div>` : ''}
             <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-50 flex justify-between">
               <span>${formatDate(s.dateSignalement)}</span>
               <span class="font-bold text-blue-600">${s.email === store.user?.email ? 'Moi' : ''}</span>

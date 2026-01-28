@@ -45,8 +45,21 @@ public class SignalementService {
     @Autowired
     private FirestoreSyncService firestoreSyncService;
 
+    @Transactional
     public Map<String, Integer> synchroniserDonnees() {
-        return firestoreSyncService.syncFromFirestoreToPostgres();
+        // 1. D'abord on ramène ce qui est nouveau sur Mobile vers Postgres
+        Map<String, Integer> result = firestoreSyncService.syncFromFirestoreToPostgres();
+        
+        // 2. Ensuite on s'assure que ce qui a été modifié sur le Web (comme l'entreprise) est renvoyé vers Firestore
+        // On ne synchronise que les signalements qui ont un ID Firebase
+        List<Signalement> signalementsWithFirebase = signalementRepository.findAll();
+        for (Signalement s : signalementsWithFirebase) {
+            if (s.getIdFirebase() != null && !s.getIdFirebase().isEmpty()) {
+                firestoreSyncService.syncSignalementToFirebase(s);
+            }
+        }
+        
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -141,6 +154,14 @@ public class SignalementService {
         details.setPhotoUrl(photoUrl);
         
         detailsRepository.save(details);
+        s.setDetails(details);
+
+        // Synchronisation Firebase
+        String idFirebase = firestoreSyncService.createSignalementInFirestore(s, details);
+        if (idFirebase != null) {
+            s.setIdFirebase(idFirebase);
+            signalementRepository.save(s);
+        }
     }
 
     @Transactional

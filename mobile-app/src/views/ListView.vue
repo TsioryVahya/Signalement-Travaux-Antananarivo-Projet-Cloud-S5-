@@ -75,10 +75,10 @@
             </h3>
 
             <!-- Nouveaux détails (Sync Postgres) -->
-            <div v-if="s.entreprise_concerne || s.budget || s.surface_m2" class="grid grid-cols-2 gap-2 mb-3">
-              <div v-if="s.entreprise_concerne" class="bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <div v-if="s.entreprise || s.budget || s.surface_m2" class="grid grid-cols-2 gap-2 mb-3">
+              <div v-if="s.entreprise" class="bg-slate-50 p-2 rounded-lg border border-slate-100">
                 <p class="text-[8px] font-bold text-slate-400 uppercase">Entreprise</p>
-                <p class="text-[10px] font-medium text-slate-600 truncate">{{ s.entreprise_concerne }}</p>
+                <p class="text-[10px] font-medium text-slate-600 truncate">{{ s.entreprise }}</p>
               </div>
               <div v-if="s.surface_m2" class="bg-slate-50 p-2 rounded-lg border border-slate-100">
                 <p class="text-[8px] font-bold text-slate-400 uppercase">Surface</p>
