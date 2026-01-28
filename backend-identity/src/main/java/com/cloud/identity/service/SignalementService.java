@@ -204,7 +204,9 @@ public class SignalementService {
             details.setEntreprise(null);
         }
         
-        details.setPhotoUrl(photoUrl);
+        if (photoUrl != null && !photoUrl.isEmpty()) {
+            details.setPhotoUrl(photoUrl);
+        }
         
         s.setDetails(details);
         detailsRepository.save(details);
@@ -240,8 +242,8 @@ public class SignalementService {
         if (dto.getDateSignalement() != null) {
             try {
                 Object dateObj = dto.getDateSignalement();
-                if (dateObj instanceof com.google.cloud.Timestamp) {
-                    s.setDateSignalement(((com.google.cloud.Timestamp) dateObj).toSqlTimestamp().toInstant());
+                if (dateObj instanceof java.util.Date) {
+                    s.setDateSignalement(((java.util.Date) dateObj).toInstant());
                 } else {
                     s.setDateSignalement(Instant.parse(dateObj.toString()));
                 }

@@ -103,7 +103,8 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
-      entrepriseConcerne: signalement.entrepriseNom || signalement.entrepriseConcerne || ''
+      entrepriseConcerne: signalement.entrepriseNom || signalement.entrepriseConcerne || '',
+      photoUrl: signalement.photoUrl || ''
     };
     this.showEditModal = true;
   }
@@ -141,7 +142,8 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description,
       budget: signalement.budget,
       surfaceM2: signalement.surfaceM2,
-      entrepriseConcerne: signalement.entrepriseConcerne
+      entrepriseConcerne: signalement.entrepriseConcerne,
+      photoUrl: signalement.photoUrl
     };
 
     this.signalementService.updateSignalement(id, updateData).subscribe({

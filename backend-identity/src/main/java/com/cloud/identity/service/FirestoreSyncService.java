@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class FirestoreSyncService {
@@ -143,7 +144,10 @@ public class FirestoreSyncService {
                 String idFirebase = document.getId();
                 
                 // Vérifier si le signalement existe déjà dans Postgres
-                if (signalementRepository.findByIdFirebase(idFirebase).isPresent()) {
+                Optional<Signalement> existingSignalement = signalementRepository.findByIdFirebase(idFirebase);
+                if (existingSignalement.isPresent()) {
+                    // Si le signalement existe déjà, on ne fait rien pour l'instant 
+                    // (on évite d'écraser les données locales par des données Firestore potentiellement incomplètes)
                     continue;
                 }
 
@@ -241,7 +245,9 @@ public class FirestoreSyncService {
                     details.setEntreprise(entreprise);
                 }
                 
-                details.setPhotoUrl(photoUrl);
+                if (photoUrl != null && !photoUrl.isEmpty()) {
+                    details.setPhotoUrl(photoUrl);
+                }
                 
                 s.setDetails(details);
                 detailsRepository.save(details);
@@ -346,7 +352,10 @@ public class FirestoreSyncService {
                     updates.put("entreprise", null);
                 }
                 
-                updates.put("photo_url", signalement.getDetails().getPhotoUrl());
+                // Ne mettre à jour la photo que si elle n'est pas nulle
+                if (signalement.getDetails().getPhotoUrl() != null && !signalement.getDetails().getPhotoUrl().isEmpty()) {
+                    updates.put("photo_url", signalement.getDetails().getPhotoUrl());
+                }
             }
             
             // On met à jour le document Firebase correspondant
