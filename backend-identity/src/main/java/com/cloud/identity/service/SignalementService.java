@@ -47,17 +47,23 @@ public class SignalementService {
 
     @Transactional
     public Map<String, Integer> synchroniserDonnees() {
+        System.out.println("🚀 Début de l'opération de synchronisation globale...");
+        
         // 1. D'abord on ramène ce qui est nouveau sur Mobile vers Postgres
         Map<String, Integer> result = firestoreSyncService.syncFromFirestoreToPostgres();
+        System.out.println("✅ Étape 1 terminée : " + result.getOrDefault("signalements", 0) + " signalements récupérés de Firestore.");
         
-        // 2. Ensuite on s'assure que ce qui a été modifié sur le Web (comme l'entreprise) est renvoyé vers Firestore
-        // On ne synchronise que les signalements qui ont un ID Firebase
+        // 2. Ensuite on s'assure que ce qui a été modifié sur le Web est renvoyé vers Firestore
+        System.out.println("🔄 Étape 2 : Synchronisation des modifications locales vers Firestore...");
         List<Signalement> signalementsWithFirebase = signalementRepository.findAll();
+        int syncedBack = 0;
         for (Signalement s : signalementsWithFirebase) {
             if (s.getIdFirebase() != null && !s.getIdFirebase().isEmpty()) {
                 firestoreSyncService.syncSignalementToFirebase(s);
+                syncedBack++;
             }
         }
+        System.out.println("✅ Étape 2 terminée : " + syncedBack + " signalements mis à jour dans Firestore.");
         
         return result;
     }

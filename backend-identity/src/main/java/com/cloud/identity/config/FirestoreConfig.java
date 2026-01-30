@@ -21,11 +21,16 @@ public class FirestoreConfig {
 
         try {
             // Charger le fichier de credentials UNE SEULE FOIS
-            InputStream serviceAccount = new ClassPathResource("serviceAccountKey.json").getInputStream();
-
-            if (serviceAccount == null) {
+            System.out.println("🔍 Recherche du fichier serviceAccountKey.json dans le classpath...");
+            ClassPathResource resource = new ClassPathResource("serviceAccountKey.json");
+            
+            if (!resource.exists()) {
+                System.err.println("❌ CRITIQUE : Fichier serviceAccountKey.json introuvable !");
                 throw new IOException("Fichier serviceAccountKey.json introuvable dans le classpath !");
             }
+
+            InputStream serviceAccount = resource.getInputStream();
+            System.out.println("✅ Fichier serviceAccountKey.json trouvé.");
 
             // Créer les credentials
             GoogleCredentials credentials = GoogleCredentials.fromStream(serviceAccount);
