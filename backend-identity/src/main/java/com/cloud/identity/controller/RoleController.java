@@ -35,14 +35,16 @@ public class RoleController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Role> update(@PathVariable Integer id, @RequestBody Role entity) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
+        if (!repository.existsById(id))
+            return ResponseEntity.notFound().build();
         entity.setId(id);
         return ResponseEntity.ok(repository.save(entity));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
+        if (!repository.existsById(id))
+            return ResponseEntity.notFound().build();
         repository.deleteById(id);
         return ResponseEntity.ok().build();
     }

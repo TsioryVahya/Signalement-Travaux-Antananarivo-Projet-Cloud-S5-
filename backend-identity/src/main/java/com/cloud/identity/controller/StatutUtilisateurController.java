@@ -35,14 +35,16 @@ public class StatutUtilisateurController {
 
     @PutMapping("/{id}")
     public ResponseEntity<StatutUtilisateur> update(@PathVariable Integer id, @RequestBody StatutUtilisateur entity) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
+        if (!repository.existsById(id))
+            return ResponseEntity.notFound().build();
         entity.setId(id);
         return ResponseEntity.ok(repository.save(entity));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (!repository.existsById(id)) return ResponseEntity.notFound().build();
+        if (!repository.existsById(id))
+            return ResponseEntity.notFound().build();
         repository.deleteById(id);
         return ResponseEntity.ok().build();
     }
