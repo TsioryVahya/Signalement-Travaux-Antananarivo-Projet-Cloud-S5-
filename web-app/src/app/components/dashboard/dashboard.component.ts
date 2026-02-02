@@ -31,4 +31,14 @@ export class DashboardComponent implements OnInit {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
+
+  isRouteActive(path: string, queryParams: any = null): boolean {
+    const urlTree = this.router.createUrlTree([path], { queryParams: queryParams || {} });
+    return this.router.isActive(urlTree, {
+      paths: 'exact',
+      queryParams: queryParams ? 'exact' : 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored'
+    });
+  }
 }

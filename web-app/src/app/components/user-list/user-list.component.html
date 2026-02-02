@@ -1,8 +1,8 @@
 <div class="space-y-6">
   <header class="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-100">
     <div>
-      <h1 class="text-2xl font-bold text-gray-800">Gestion des Utilisateurs</h1>
-      <p class="text-sm text-gray-500">Gérez les comptes et les accès système</p>
+      <h1 class="text-2xl font-bold text-gray-800">{{ onlyBlocked ? 'Utilisateurs Bloqués' : 'Gestion des Utilisateurs' }}</h1>
+      <p class="text-sm text-gray-500">{{ onlyBlocked ? 'Liste des comptes actuellement bloqués' : 'Gérez les comptes et les accès système' }}</p>
     </div>
     <div class="flex items-center space-x-4">
       <button (click)="openModal()" 
@@ -28,6 +28,23 @@
       </div>
     </div>
   </header>
+
+  <!-- Navigation par onglets -->
+  <div class="flex border-b border-gray-200">
+    <button (click)="setFilter(false)"
+            [ngClass]="!onlyBlocked ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-all">
+      Tous les Utilisateurs
+    </button>
+    <button (click)="setFilter(true)"
+            [ngClass]="onlyBlocked ? 'border-indigo-500 text-indigo-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'"
+            class="py-4 px-6 text-sm font-medium border-b-2 transition-all flex items-center">
+      Utilisateurs Bloqués
+      <span *ngIf="onlyBlocked" class="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-600 rounded-full">
+        {{ users.length }}
+      </span>
+    </button>
+  </div>
 
   <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
     <div class="overflow-x-auto">

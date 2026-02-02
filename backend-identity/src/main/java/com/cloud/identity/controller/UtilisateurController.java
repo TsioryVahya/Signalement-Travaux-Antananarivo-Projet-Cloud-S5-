@@ -44,6 +44,11 @@ public class UtilisateurController {
         return repository.findAll();
     }
 
+    @GetMapping("/blocked")
+    public List<Utilisateur> getBlocked() {
+        return repository.findByStatutActuelNom("BLOQUE");
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Utilisateur> getById(@PathVariable UUID id) {
         return repository.findById(id)
@@ -60,6 +65,7 @@ public class UtilisateurController {
     public ResponseEntity<Utilisateur> update(@PathVariable UUID id, @RequestBody Utilisateur entity) {
         if (!repository.existsById(id)) return ResponseEntity.notFound().build();
         entity.setId(id);
+        entity.setDateDerniereModification(java.time.Instant.now());
         return ResponseEntity.ok(repository.save(entity));
     }
 

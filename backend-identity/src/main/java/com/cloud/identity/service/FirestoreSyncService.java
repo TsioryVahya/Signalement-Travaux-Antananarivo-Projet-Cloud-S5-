@@ -13,6 +13,7 @@ import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class FirestoreSyncService {
@@ -38,11 +39,15 @@ public class FirestoreSyncService {
     @Autowired
     private StatutUtilisateurRepository statutUtilisateurRepository;
 
+    @Autowired
+    private ConfigurationRepository configurationRepository;
+
     /**
      * Synchronise les utilisateurs de Firestore vers PostgreSQL.
      */
     public Map<String, Integer> syncUsersFromFirestoreToPostgres() {
         int createdUsers = 0;
+        int updatedUsers = 0;
         try {
             ApiFuture<QuerySnapshot> future = firestore.collection("utilisateurs").get();
             List<QueryDocumentSnapshot> documents = future.get().getDocuments();
@@ -51,31 +56,73 @@ public class FirestoreSyncService {
                 String email = document.getString("email");
                 if (email == null || email.isEmpty()) continue;
 
-                if (utilisateurRepository.findByEmail(email).isPresent()) {
-                    continue;
+                Optional<Utilisateur> userOpt = utilisateurRepository.findByEmail(email);
+                Utilisateur user;
+                boolean isNew = false;
+
+                if (userOpt.isPresent()) {
+                    user = userOpt.get();
+                    
+                    // --- LOGIQUE DE COMPARAISON DES DATES (Solution 2) ---
+                    com.google.cloud.Timestamp firestoreTime = document.getTimestamp("date_derniere_modification");
+                    if (firestoreTime != null && user.getDateDerniereModification() != null) {
+                        java.time.Instant firestoreInstant = firestoreTime.toSqlTimestamp().toInstant();
+                        java.time.Instant postgresInstant = user.getDateDerniereModification();
+                        
+                        // Si Postgres est plus récent, on ignore l'import pour cet utilisateur
+                        if (postgresInstant.isAfter(firestoreInstant)) {
+                            System.out.println("⏳ Sync ignorée pour " + email + " (Postgres est plus récent : " + postgresInstant + " > " + firestoreInstant + ")");
+                            continue; 
+                        }
+                    }
+                } else {
+                    user = new Utilisateur();
+                    user.setEmail(email);
+                    user.setDateCreation(java.time.Instant.now());
+                    user.setRole(roleRepository.findByNom("UTILISATEUR").orElse(null));
+                    isNew = true;
                 }
 
-                Utilisateur user = new Utilisateur();
-                user.setEmail(email);
-                user.setMotDePasse(document.getString("motDePasse") != null ? document.getString("motDePasse") : "default_password");
-                
-                // Rôle par défaut : UTILISATEUR
-                user.setRole(roleRepository.findByNom("UTILISATEUR").orElse(null));
-                
-                // Statut par défaut : ACTIF
-                user.setStatutActuel(statutUtilisateurRepository.findByNom("ACTIF").orElse(null));
-                
-                user.setDateCreation(java.time.Instant.now());
-                
+                // Synchroniser le mot de passe si présent
+                if (document.getString("motDePasse") != null) {
+                    user.setMotDePasse(document.getString("motDePasse"));
+                } else if (isNew) {
+                    user.setMotDePasse("default_password");
+                }
+
+                // Synchroniser le statut depuis Firestore
+                String firestoreStatut = document.getString("statut");
+                if (firestoreStatut != null) {
+                    final String statusToSearch = firestoreStatut;
+                    user.setStatutActuel(statutUtilisateurRepository.findByNom(statusToSearch)
+                            .orElseGet(() -> statutUtilisateurRepository.findByNom("ACTIF").orElse(null)));
+                } else if (isNew) {
+                    user.setStatutActuel(statutUtilisateurRepository.findByNom("ACTIF").orElse(null));
+                }
+
+                // Synchroniser les tentatives de connexion
+                Long tentatives = document.getLong("tentatives_connexion");
+                if (tentatives != null) {
+                    user.setTentativesConnexion(tentatives.intValue());
+                }
+
+                // Mettre à jour la date de modification locale avec celle de Firestore
+                com.google.cloud.Timestamp firestoreTime = document.getTimestamp("date_derniere_modification");
+                if (firestoreTime != null) {
+                    user.setDateDerniereModification(firestoreTime.toSqlTimestamp().toInstant());
+                }
+
                 utilisateurRepository.save(user);
-                createdUsers++;
+                if (isNew) createdUsers++;
+                else updatedUsers++;
             }
         } catch (Exception e) {
             System.err.println("Erreur lors de la synchronisation des utilisateurs Firestore -> Postgres : " + e.getMessage());
         }
 
         Map<String, Integer> result = new HashMap<>();
-        result.put("utilisateurs", createdUsers);
+        result.put("utilisateurs_crees", createdUsers);
+        result.put("utilisateurs_mis_a_jour", updatedUsers);
         return result;
     }
 
@@ -86,28 +133,8 @@ public class FirestoreSyncService {
         int syncedUsers = 0;
         try {
             List<Utilisateur> users = utilisateurRepository.findAll();
-            CollectionReference usersCol = firestore.collection("utilisateurs");
-
             for (Utilisateur user : users) {
-                Map<String, Object> data = new HashMap<>();
-                data.put("postgresId", user.getId().toString());
-                data.put("email", user.getEmail());
-                data.put("motDePasse", user.getMotDePasse());
-                
-                if (user.getRole() != null) {
-                    data.put("role", user.getRole().getNom());
-                }
-                
-                if (user.getStatutActuel() != null) {
-                    data.put("statut", user.getStatutActuel().getNom());
-                }
-                
-                data.put("dateCreation", user.getDateCreation() != null ? user.getDateCreation().toString() : null);
-                data.put("derniereConnexion", user.getDerniereConnexion() != null ? user.getDerniereConnexion().toString() : null);
-
-                // Utiliser l'email comme ID de document dans Firestore pour éviter les doublons
-                // ou un ID basé sur l'email si on veut rester consistent.
-                usersCol.document(user.getEmail()).set(data).get();
+                syncUserToFirestore(user);
                 syncedUsers++;
             }
         } catch (Exception e) {
@@ -117,6 +144,57 @@ public class FirestoreSyncService {
         Map<String, Integer> result = new HashMap<>();
         result.put("syncedUsers", syncedUsers);
         return result;
+    }
+
+    /**
+     * Synchronise un utilisateur spécifique vers Firestore.
+     */
+    public void syncUserToFirestore(Utilisateur user) {
+        try {
+            CollectionReference usersCol = firestore.collection("utilisateurs");
+            Map<String, Object> data = new HashMap<>();
+            data.put("postgresId", user.getId().toString());
+            data.put("email", user.getEmail());
+            data.put("motDePasse", user.getMotDePasse());
+            data.put("tentatives_connexion", user.getTentativesConnexion() != null ? user.getTentativesConnexion() : 0);
+
+            if (user.getRole() != null) {
+                data.put("role", user.getRole().getNom());
+            }
+
+            if (user.getStatutActuel() != null) {
+                data.put("statut", user.getStatutActuel().getNom());
+            }
+
+            data.put("dateCreation", user.getDateCreation() != null ? user.getDateCreation().toString() : null);
+            data.put("derniereConnexion", user.getDerniereConnexion() != null ? user.getDerniereConnexion().toString() : null);
+            data.put("date_derniere_modification", user.getDateDerniereModification() != null ? com.google.cloud.Timestamp.of(java.sql.Timestamp.from(user.getDateDerniereModification())) : null);
+
+            // Utiliser l'email comme ID de document dans Firestore
+            usersCol.document(user.getEmail()).set(data).get();
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la synchronisation de l'utilisateur " + user.getEmail() + " vers Firestore : " + e.getMessage());
+        }
+    }
+
+    /**
+     * Synchronise les configurations de PostgreSQL vers Firestore.
+     */
+    public void syncConfigurationsToFirestore() {
+        try {
+            List<com.cloud.identity.entities.Configuration> configs = configurationRepository.findAll();
+            CollectionReference configCol = firestore.collection("configurations");
+
+            for (com.cloud.identity.entities.Configuration config : configs) {
+                Map<String, Object> data = new HashMap<>();
+                data.put("valeur", config.getValeur());
+                data.put("description", config.getDescription());
+                configCol.document(config.getCle()).set(data).get();
+            }
+            System.out.println("✅ Configurations synchronisées vers Firestore.");
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la synchronisation des configurations vers Firestore : " + e.getMessage());
+        }
     }
 
     /**
