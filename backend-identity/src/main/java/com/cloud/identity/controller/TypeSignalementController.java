@@ -4,9 +4,7 @@ import com.cloud.identity.entities.TypeSignalement;
 import com.cloud.identity.repository.TypeSignalementRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,5 +19,26 @@ public class TypeSignalementController {
     @GetMapping
     public List<TypeSignalement> getAll() {
         return typeSignalementRepository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public TypeSignalement getById(@PathVariable Integer id) {
+        return typeSignalementRepository.findById(id).orElse(null);
+    }
+
+    @PostMapping
+    public TypeSignalement create(@RequestBody TypeSignalement typeSignalement) {
+        return typeSignalementRepository.save(typeSignalement);
+    }
+
+    @PutMapping("/{id}")
+    public TypeSignalement update(@PathVariable Integer id, @RequestBody TypeSignalement typeSignalement) {
+        typeSignalement.setId(id);
+        return typeSignalementRepository.save(typeSignalement);
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable Integer id) {
+        typeSignalementRepository.deleteById(id);
     }
 }
