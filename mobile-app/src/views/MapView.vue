@@ -235,15 +235,22 @@ const handleLogin = async () => {
     const maxTentatives = configDoc.exists() ? parseInt(configDoc.data().valeur) : 3;
 
     // 2. Chercher l'utilisateur dans Firestore
-    const userDocRef = doc(db, 'utilisateurs', email);
-    const userDoc = await getDoc(userDocRef);
+    // On cherche par email dans tous les documents car l'ID du document est maintenant l'UUID Postgres
+    const usersRef = collection(db, 'utilisateurs');
+    const q = query(usersRef, where('email', '==', email));
+    const querySnapshot = await getDocs(q);
 
-    if (!userDoc.exists()) {
+    if (querySnapshot.empty) {
       authError.value = "Email ou mot de passe incorrect";
       return;
     }
 
+    const userDoc = querySnapshot.docs[0];
+    const userDocRef = userDoc.ref;
     const userData = userDoc.data();
+
+    console.log("Utilisateur trouvé dans Firestore:", userData.email);
+    console.log("MDP Firestore:", userData.motDePasse, "| MDP saisi:", password);
 
     // 2.5 Récupérer la durée de session (duree_session_heures)
     const sessionConfigDoc = await getDoc(doc(db, 'configurations', 'duree_session_heures'));

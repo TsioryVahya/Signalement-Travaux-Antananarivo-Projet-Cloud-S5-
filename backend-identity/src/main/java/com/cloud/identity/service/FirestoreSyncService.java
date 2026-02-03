@@ -197,6 +197,9 @@ public class FirestoreSyncService {
             data.put("derniereConnexion", user.getDerniereConnexion() != null ? user.getDerniereConnexion().toString() : null);
             data.put("date_derniere_modification", user.getDateDerniereModification() != null ? com.google.cloud.Timestamp.of(java.sql.Timestamp.from(user.getDateDerniereModification())) : null);
 
+            // LOG POUR DEBUG : On affiche ce qu'on envoie
+            System.out.println("📤 Sync vers Firestore [" + user.getEmail() + "] - MDP: " + user.getMotDePasse());
+
             // Utiliser l'ID Postgres comme ID de document dans Firestore pour éviter les doublons si l'email change
             usersCol.document(user.getId().toString()).set(data).get();
         } catch (Exception e) {
