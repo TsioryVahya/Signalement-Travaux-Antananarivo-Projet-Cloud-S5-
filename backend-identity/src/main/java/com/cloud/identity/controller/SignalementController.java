@@ -32,7 +32,7 @@ public class SignalementController {
             Map<String, Integer> result = signalementService.synchroniserDonnees();
             return ResponseEntity.ok(result);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage() != null ? e.getMessage() : "Unknown error"));
         }
     }
 

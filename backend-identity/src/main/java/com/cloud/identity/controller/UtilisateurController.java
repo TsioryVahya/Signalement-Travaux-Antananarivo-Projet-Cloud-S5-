@@ -26,7 +26,7 @@ public class UtilisateurController {
         try {
             return ResponseEntity.ok(syncService.syncUsersFromFirestoreToPostgres());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
@@ -35,7 +35,7 @@ public class UtilisateurController {
         try {
             return ResponseEntity.ok(syncService.syncUsersFromPostgresToFirestore());
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 

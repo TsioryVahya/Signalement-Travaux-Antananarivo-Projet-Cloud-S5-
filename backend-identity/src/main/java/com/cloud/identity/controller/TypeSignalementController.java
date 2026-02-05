@@ -24,9 +24,10 @@ public class TypeSignalementController {
     @PostMapping("/sync-to-firebase")
     public ResponseEntity<?> syncToFirebase() {
         try {
-            return ResponseEntity.ok(syncService.syncTypesSignalementToFirestore());
+            String message = syncService.syncTypesSignalementToFirestore();
+            return ResponseEntity.ok(java.util.Map.of("message", message));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
         }
     }
 
