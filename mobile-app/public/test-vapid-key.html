@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Clé VAPID</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border-left: 4px solid #667eea;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .warning {
+            color: #f39c12;
+            font-weight: bold;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            border-left: 4px solid #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Test de Clé VAPID Firebase</h1>
+        
+        <div class="info">
+            <strong>📋 Instructions :</strong>
+            <ol>
+                <li>Allez sur <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+                <li>Projet → Paramètres ⚙️ → Cloud Messaging</li>
+                <li>Copiez la clé dans "Certificats de clés Web push"</li>
+                <li>Collez-la ci-dessous et testez</li>
+            </ol>
+        </div>
+
+        <div class="input-group">
+            <label for="vapidKey">Clé VAPID depuis Firebase Console :</label>
+            <input 
+                type="text" 
+                id="vapidKey" 
+                placeholder="BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI"
+                value="BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI"
+            >
+        </div>
+
+        <button onclick="test1()">Test 1 : Avec clé VAPID saisie</button>
+        <button onclick="test2()">Test 2 : Sans clé VAPID (défaut)</button>
+        <button onclick="test3()">Test 3 : Diagnostic complet</button>
+        <button onclick="clearLogs()" style="background: #95a5a6">Effacer les logs</button>
+
+        <h3>📊 Résultats :</h3>
+        <pre id="result">En attente du test...</pre>
+    </div>
+
+    <script type="module">
+        let logs = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const emoji = {
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️',
+                'info': 'ℹ️'
+            }[type] || 'ℹ️';
+            
+            logs.push(`[${timestamp}] ${emoji} ${message}`);
+            updateDisplay();
+        }
+
+        function updateDisplay() {
+            const resultEl = document.getElementById('result');
+            resultEl.innerHTML = logs.join('\n');
+            resultEl.scrollTop = resultEl.scrollHeight;
+        }
+
+        window.clearLogs = () => {
+            logs = ['En attente du test...'];
+            updateDisplay();
+        };
+
+        // Configuration Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBroRMMRCSVdqAzpuivp7PSSP9X1WIk3VY",
+            authDomain: "projet-cloud-s5-routier.firebaseapp.com",
+            projectId: "projet-cloud-s5-routier",
+            storageBucket: "projet-cloud-s5-routier.firebasestorage.app",
+            messagingSenderId: "792049548362",
+            appId: "1:792049548362:web:6ab3ce65b1584730c63ab3"
+        };
+
+        // Test 1 : Avec clé VAPID
+        window.test1 = async () => {
+            logs = [];
+            log('=== TEST 1 : Avec clé VAPID saisie ===');
+            
+            const vapidKey = document.getElementById('vapidKey').value.trim();
+            
+            if (!vapidKey) {
+                log('Veuillez saisir une clé VAPID', 'error');
+                return;
+            }
+
+            log(`Clé VAPID : ${vapidKey.substring(0, 20)}...${vapidKey.substring(vapidKey.length - 10)}`);
+
+            try {
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js');
+                const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging.js');
+
+                log('Firebase SDK chargé');
+
+                const app = initializeApp(firebaseConfig);
+                log('Firebase initialisé');
+
+                // Service Worker
+                log('Enregistrement du Service Worker...');
+                const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await navigator.serviceWorker.ready;
+                log('Service Worker prêt', 'success');
+
+                // Permission
+                const perm = await Notification.requestPermission();
+                log(`Permission : ${perm}`, perm === 'granted' ? 'success' : 'warning');
+
+                if (perm !== 'granted') {
+                    log('Veuillez autoriser les notifications', 'error');
+                    return;
+                }
+
+                // Messaging
+                const messaging = getMessaging(app);
+                log('Firebase Messaging initialisé');
+
+                // Token
+                log('Tentative de récupération du token...');
+                const token = await getToken(messaging, {
+                    vapidKey: vapidKey,
+                    serviceWorkerRegistration: reg
+                });
+
+                log('=== SUCCÈS ===', 'success');
+                log(`Token FCM : ${token}`, 'success');
+                log(`Longueur : ${token.length} caractères`);
+
+            } catch (error) {
+                log('=== ÉCHEC ===', 'error');
+                log(`Erreur : ${error.message}`, 'error');
+                log(`Code : ${error.code || 'N/A'}`);
+                console.error('Détails complets :', error);
+            }
+        };
+
+        // Test 2 : Sans clé VAPID
+        window.test2 = async () => {
+            logs = [];
+            log('=== TEST 2 : Sans clé VAPID (clé par défaut du projet) ===');
+
+            try {
+                const { initializeApp } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js');
+                const { getMessaging, getToken } = await import('https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging.js');
+
+                log('Firebase SDK chargé');
+
+                const app = initializeApp(firebaseConfig);
+                log('Firebase initialisé');
+
+                // Service Worker
+                log('Enregistrement du Service Worker...');
+                const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+                await navigator.serviceWorker.ready;
+                log('Service Worker prêt', 'success');
+
+                // Permission
+                const perm = await Notification.requestPermission();
+                log(`Permission : ${perm}`, perm === 'granted' ? 'success' : 'warning');
+
+                if (perm !== 'granted') {
+                    log('Veuillez autoriser les notifications', 'error');
+                    return;
+                }
+
+                // Messaging
+                const messaging = getMessaging(app);
+                log('Firebase Messaging initialisé');
+
+                // Token SANS clé VAPID
+                log('Tentative de récupération du token (SANS clé VAPID)...');
+                const token = await getToken(messaging);
+
+                log('=== SUCCÈS ===', 'success');
+                log(`Token FCM : ${token}`, 'success');
+                log(`Longueur : ${token.length} caractères`);
+                log('✅ La clé VAPID par défaut du projet fonctionne !', 'success');
+
+            } catch (error) {
+                log('=== ÉCHEC ===', 'error');
+                log(`Erreur : ${error.message}`, 'error');
+                log(`Code : ${error.code || 'N/A'}`);
+                
+                if (error.message.includes('messaging/vapid-key-not-found')) {
+                    log('⚠️ Aucune clé VAPID configurée sur Firebase Console', 'warning');
+                    log('→ Allez sur Firebase Console et générez une clé', 'warning');
+                }
+                
+                console.error('Détails complets :', error);
+            }
+        };
+
+        // Test 3 : Diagnostic complet
+        window.test3 = async () => {
+            logs = [];
+            log('=== DIAGNOSTIC COMPLET ===');
+
+            // 1. Navigateur
+            log('1. Navigateur');
+            log(`   User Agent : ${navigator.userAgent.substring(0, 60)}...`);
+            log(`   Service Worker supporté : ${('serviceWorker' in navigator) ? '✅' : '❌'}`);
+            log(`   Notifications supportées : ${('Notification' in window) ? '✅' : '❌'}`);
+
+            // 2. Service Workers
+            log('2. Service Workers');
+            const regs = await navigator.serviceWorker.getRegistrations();
+            log(`   Nombre de SW enregistrés : ${regs.length}`);
+            regs.forEach((reg, i) => {
+                log(`   SW ${i + 1} : ${reg.scope}`);
+                log(`      Active : ${reg.active?.state || 'none'}`);
+            });
+            log(`   Controller : ${navigator.serviceWorker.controller ? '✅' : '❌'}`);
+
+            // 3. Permission
+            log('3. Permission notification');
+            log(`   État : ${Notification.permission}`);
+
+            // 4. Fichier SW accessible
+            log('4. Fichier Service Worker');
+            try {
+                const response = await fetch('/firebase-messaging-sw.js');
+                log(`   Status : ${response.status} ${response.ok ? '✅' : '❌'}`);
+            } catch (error) {
+                log(`   Erreur : ${error.message}`, 'error');
+            }
+
+            // 5. Configuration Firebase
+            log('5. Configuration Firebase');
+            log(`   Project ID : ${firebaseConfig.projectId}`);
+            log(`   Messaging Sender ID : ${firebaseConfig.messagingSenderId}`);
+
+            log('=== FIN DIAGNOSTIC ===');
+        };
+
+        // Auto-run diagnostic au chargement
+        setTimeout(() => {
+            log('Page chargée. Cliquez sur un bouton pour tester.');
+        }, 500);
+    </script>
+</body>
+</html>

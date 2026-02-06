@@ -230,10 +230,11 @@ import {
   getDocs,
   doc,
   getDoc,
-  updateDoc
+  updateDoc,
+  orderBy
 } from 'firebase/firestore';
-import { getToken } from 'firebase/messaging';
-import { db, getMessagingInstance } from '../firebase/config';
+import { getToken, getMessaging } from 'firebase/messaging';
+import { db } from '../firebase/config';
 import { store, setUser } from '../store';
 
 // UI State
@@ -251,124 +252,70 @@ const requestFcmToken = async (userDocRef: any) => {
   console.log('Début requestFcmToken...');
   
   try {
-    // Obtenir l'instance de messaging (qui s'assure que le SW est prêt)
-    const messaging = await getMessagingInstance();
+    // 1. Obtenir l'instance de messaging (qui s'assure que le SW est prêt)
+    // IMPORTANT: On utilise directement getMessaging de firebase/messaging ici
+    // car on a besoin d'une instance fraîche
+    const messaging = await getMessaging();
     
     if (!messaging) {
-      console.error('Messaging non disponible (Service Worker non supporté ou erreur d\'initialisation)');
-      // Enregistrer que le messaging n'est pas disponible
+      console.error('Messaging non disponible');
       await updateDoc(userDocRef, {
-        fcmToken: null,
         fcmTokenStatus: 'messaging_unavailable',
-        fcmTokenError: 'Service Worker non supporté',
         fcmTokenDate: new Date().toISOString()
       });
       return;
     }
     
-    // Demander explicitement la permission
-    let permission = Notification.permission;
-    if (permission === 'default') {
-      permission = await Notification.requestPermission();
-    }
+    // 2. Vérifier la permission
+    const permission = await Notification.requestPermission();
     console.log('Permission notification:', permission);
     
     if (permission !== 'granted') {
-      console.warn("Permission de notification non accordée:", permission);
-      
-      // Enregistrer le refus de permission
       await updateDoc(userDocRef, {
-        fcmToken: null,
-        fcmTokenStatus: permission === 'denied' ? 'permission_denied' : 'permission_default',
-        fcmTokenError: `Permission: ${permission}`,
+        fcmTokenStatus: 'permission_denied',
         fcmTokenDate: new Date().toISOString()
       });
-      
-      if (permission === 'denied') {
-        alert("Les notifications sont bloquées par votre navigateur. Veuillez les activer dans les paramètres du site (cliquez sur l'icône à gauche de l'URL).");
-      }
       return;
     }
 
-    // Récupérer le token FCM
-    console.log('Tentative de récupération du token FCM...');
+    // 3. S'assurer que le Service Worker est prêt
+    console.log('Attente du Service Worker...');
+    const registration = await navigator.serviceWorker.ready;
+
+    // 4. Récupérer le token avec une seule méthode propre
+    console.log('Récupération du token FCM...');
+    const currentToken = await getToken(messaging, {
+      vapidKey: 'BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI',
+      serviceWorkerRegistration: registration
+    });
     
-    try {
-      const currentToken = await getToken(messaging, {
-        vapidKey: 'BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI'
-      });
-      
-      if (currentToken) {
-        console.log('✅ FCM Token reçu:', currentToken);
-        await updateDoc(userDocRef, {
-          fcmToken: currentToken,
-          fcmTokenStatus: 'active',
-          fcmTokenDate: new Date().toISOString()
-        });
-        if (store.user) {
-          store.user.fcmToken = currentToken;
-          localStorage.setItem('app_user', JSON.stringify(store.user));
-        }
-        console.log('Token FCM enregistré avec succès dans Firestore');
-      } else {
-        console.warn('Aucun token FCM reçu');
-        // Enregistrer qu'aucun token n'a été reçu
-        await updateDoc(userDocRef, {
-          fcmToken: null,
-          fcmTokenStatus: 'no_token',
-          fcmTokenDate: new Date().toISOString()
-        });
-      }
-    } catch (tokenError: any) {
-      // Erreur spécifique lors de la récupération du token
-      console.error('❌ Erreur lors de la récupération du token FCM:', tokenError.message);
-      
-      if (tokenError.code === 'messaging/token-subscribe-failed' || 
-          tokenError.message?.includes('push service error')) {
-        console.warn('⚠️ Push service error détecté. Cela peut être dû à:');
-        console.warn('1. Problème temporaire du service de push du navigateur');
-        console.warn('2. Clé VAPID incorrecte ou expirée');
-        console.warn('3. Configuration Firebase Cloud Messaging incomplète');
-        console.warn('L\'utilisateur pourra tout de même utiliser l\'application, mais sans notifications push.');
-        
-        // Enregistrer l'erreur dans Firestore pour diagnostic
-        await updateDoc(userDocRef, {
-          fcmToken: null,
-          fcmTokenStatus: 'error',
-          fcmTokenError: tokenError.message || 'push service error',
-          fcmTokenDate: new Date().toISOString()
-        });
-        
-        console.log('➡️ Connexion sans token FCM (mode dégradé) - Erreur enregistrée dans Firestore');
-      } else {
-        // Autre erreur, enregistrer quand même
-        await updateDoc(userDocRef, {
-          fcmToken: null,
-          fcmTokenStatus: 'error',
-          fcmTokenError: tokenError.message || 'unknown error',
-          fcmTokenDate: new Date().toISOString()
-        });
-        
-        // On ne propage pas l'erreur pour ne pas bloquer la connexion
-        console.log('➡️ Connexion sans token FCM - Autre erreur enregistrée');
-      }
-    }
-    
-  } catch (err: any) {
-    console.error('Erreur globale lors de la récupération du token FCM:', err);
-    console.error('Détails de l\'erreur:', err.message, err.code);
-    
-    // Enregistrer l'erreur globale dans Firestore
-    try {
+    if (currentToken) {
+      console.log('FCM Token reçu:', currentToken);
       await updateDoc(userDocRef, {
-        fcmToken: null,
-        fcmTokenStatus: 'error',
-        fcmTokenError: err.message || 'Erreur inconnue',
-        fcmTokenDate: new Date().toISOString()
+        fcmToken: currentToken,
+        fcmTokenStatus: 'success',
+        fcmTokenDate: new Date().toISOString(),
+        fcmTokenError: null
       });
-      console.log('Erreur FCM enregistrée dans Firestore');
-    } catch (updateError) {
-      console.error('Impossible d\'enregistrer l\'erreur FCM dans Firestore:', updateError);
+      
+      if (store.user) {
+        store.user.fcmToken = currentToken;
+        localStorage.setItem('app_user', JSON.stringify(store.user));
+      }
+    } else {
+      throw new Error('Aucun token renvoyé par Firebase');
+    }
+  } catch (err: any) {
+    console.error('Erreur lors de la récupération du token FCM:', err);
+    await updateDoc(userDocRef, {
+      fcmTokenStatus: 'error', 
+      fcmTokenError: err.message,
+      fcmTokenDate: new Date().toISOString()
+    });
+    
+    // Si c'est une erreur de service de push, c'est souvent le navigateur ou le réseau
+    if (err.message.includes('push service error')) {
+      console.warn("Le service de push du navigateur a échoué. Essayez de redémarrer le navigateur ou vérifiez votre connexion internet.");
     }
   }
 };
