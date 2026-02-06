@@ -239,6 +239,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { Capacitor } from '@capacitor/core';
 import { db } from '../firebase/config';
 import { store, setUser } from '../store';
+import { toastController } from '@ionic/vue';
 
 // UI State
 const showLoginModal = ref(false);
@@ -386,6 +387,64 @@ const requestFcmToken = async (userDocRef: any) => {
   }
 };
 
+// Vérifier les notifications non lues au moment de la connexion
+const checkUnreadNotifications = async (userEmail: string) => {
+  try {
+    console.log('🔔 Vérification des notifications non lues pour:', userEmail);
+    
+    // Récupérer les notifications non lues de l'utilisateur
+    const notificationsRef = collection(db, 'notifications');
+    const q = query(
+      notificationsRef,
+      where('userEmail', '==', userEmail),
+      where('lue', '==', false),
+      orderBy('dateCreation', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    console.log(`📬 ${snapshot.size} notification(s) non lue(s) trouvée(s)`);
+    
+    if (snapshot.empty) {
+      return;
+    }
+    
+    // Afficher chaque notification et la marquer comme lue
+    for (const docSnap of snapshot.docs) {
+      const notif = docSnap.data();
+      console.log('📩 Affichage notification:', notif);
+      
+      // Afficher un toast pour chaque notification
+      const toast = await toastController.create({
+        message: `${notif.titre}: ${notif.message}`,
+        duration: 5000,
+        position: 'top',
+        color: 'primary',
+        buttons: [
+          {
+            text: 'OK',
+            role: 'cancel'
+          }
+        ]
+      });
+      
+      await toast.present();
+      
+      // Marquer comme lue
+      await updateDoc(doc(db, 'notifications', docSnap.id), {
+        lue: true,
+        dateLecture: new Date().toISOString()
+      });
+      
+      // Petit délai entre chaque notification pour ne pas toutes les afficher en même temps
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    console.log('✅ Toutes les notifications ont été affichées et marquées comme lues');
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification des notifications:', error);
+  }
+};
+
 // Signalement State
 const newSignalementPoint = ref<{lat: number, lng: number} | null>(null);
 const reportDescription = ref('');
@@ -499,6 +558,9 @@ const handleLogin = async () => {
       
       // Récupérer le token FCM après connexion réussie
       await requestFcmToken(userDocRef);
+      
+      // Vérifier les notifications non lues après connexion
+      await checkUnreadNotifications(appUser.email);
       
       showLoginModal.value = false;
       loginEmail.value = '';

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications Persistantes</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            font-family: inherit;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .success {
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 2px solid #dc3545;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 2px solid #17a2b8;
+            color: #0c5460;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Test Notifications Persistantes</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Instructions :</strong><br>
+            Ce formulaire crée une notification de test dans Firestore.<br>
+            1. Remplissez les champs ci-dessous<br>
+            2. Cliquez sur "Créer Notification"<br>
+            3. Reconnectez-vous sur l'app mobile pour voir la notification
+        </div>
+
+        <form id="notificationForm">
+            <div class="form-group">
+                <label>📧 Email de l'utilisateur</label>
+                <input type="email" id="userEmail" required placeholder="user@example.com">
+            </div>
+
+            <div class="form-group">
+                <label>📝 Titre de la notification</label>
+                <select id="titrePreset">
+                    <option value="">-- Ou saisissez un titre personnalisé ci-dessous --</option>
+                    <option value="✅ Signalement Approuvé">✅ Signalement Approuvé</option>
+                    <option value="❌ Signalement Rejeté">❌ Signalement Rejeté</option>
+                    <option value="🎉 Signalement Résolu">🎉 Signalement Résolu</option>
+                    <option value="🔄 Signalement En Cours">🔄 Signalement En Cours</option>
+                </select>
+                <input type="text" id="titre" required placeholder="Ex: ✅ Signalement Approuvé" style="margin-top: 10px;">
+            </div>
+
+            <div class="form-group">
+                <label>💬 Message</label>
+                <textarea id="message" rows="3" required placeholder="Ex: Votre signalement #123 a été approuvé"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>🔢 ID du signalement (optionnel)</label>
+                <input type="number" id="signalementId" placeholder="Ex: 123">
+            </div>
+
+            <button type="submit">📤 Créer Notification</button>
+        </form>
+
+        <div id="result"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getFirestore, collection, addDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+
+        // Configuration Firebase (REMPLACEZ PAR VOTRE CONFIG)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDFabkxKKRt0lQ3dEj0P7TW8sZTwU1XNEI",
+            authDomain: "projet-cloud-s5-routier.firebaseapp.com",
+            projectId: "projet-cloud-s5-routier",
+            storageBucket: "projet-cloud-s5-routier.firebasestorage.app",
+            messagingSenderId: "792049548362",
+            appId: "1:792049548362:web:89eba1f09dbe0a50a2b5fe"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Mettre à jour le titre quand un preset est sélectionné
+        document.getElementById('titrePreset').addEventListener('change', (e) => {
+            if (e.target.value) {
+                document.getElementById('titre').value = e.target.value;
+            }
+        });
+
+        document.getElementById('notificationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userEmail = document.getElementById('userEmail').value;
+            const titre = document.getElementById('titre').value;
+            const message = document.getElementById('message').value;
+            const signalementId = document.getElementById('signalementId').value;
+
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="info">⏳ Création de la notification en cours...</div>';
+
+            try {
+                const notification = {
+                    userEmail: userEmail,
+                    titre: titre,
+                    message: message,
+                    signalementId: signalementId ? parseInt(signalementId) : null,
+                    lue: false,
+                    dateCreation: new Date().toISOString(),
+                    dateLecture: null
+                };
+
+                const docRef = await addDoc(collection(db, 'notifications'), notification);
+
+                resultDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Notification créée avec succès !</strong><br><br>
+                        <strong>ID du document :</strong> ${docRef.id}<br>
+                        <strong>Email :</strong> ${userEmail}<br>
+                        <strong>Titre :</strong> ${titre}<br>
+                        <strong>Message :</strong> ${message}<br>
+                        ${signalementId ? `<strong>Signalement ID :</strong> ${signalementId}<br>` : ''}
+                        <strong>Date :</strong> ${notification.dateCreation}<br><br>
+                        <strong>📱 Prochaine étape :</strong><br>
+                        1. Déconnectez-vous de l'app mobile (si connecté)<br>
+                        2. Reconnectez-vous avec l'email <strong>${userEmail}</strong><br>
+                        3. La notification devrait s'afficher en toast !
+                    </div>
+                `;
+
+                // Réinitialiser le formulaire
+                e.target.reset();
+
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erreur lors de la création :</strong><br><br>
+                        ${error.message}<br><br>
+                        <strong>Code d'erreur :</strong> ${error.code || 'inconnu'}<br><br>
+                        <strong>💡 Vérifiez :</strong><br>
+                        - La configuration Firebase est correcte<br>
+                        - Les règles Firestore autorisent l'écriture<br>
+                        - L'index composite existe (voir NOTIFICATIONS_PERSISTANTES.md)
+                    </div>
+                `;
+                console.error('Erreur complète:', error);
+            }
+        });
+    </script>
+</body>
+</html>

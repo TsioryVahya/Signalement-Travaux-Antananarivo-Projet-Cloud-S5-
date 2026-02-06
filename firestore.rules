@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ========================================
+    // RÈGLES POUR LA COLLECTION "notifications"
+    // ========================================
+    
+    match /notifications/{notificationId} {
+      
+      // LECTURE : Uniquement pour l'utilisateur concerné
+      allow read: if request.auth != null && 
+                     resource.data.userEmail == request.auth.token.email;
+      
+      // MISE À JOUR : L'utilisateur peut uniquement marquer comme lue
+      allow update: if request.auth != null && 
+                       resource.data.userEmail == request.auth.token.email &&
+                       // Vérifier que seuls les champs "lue" et "dateLecture" sont modifiés
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['lue', 'dateLecture']) &&
+                       // Vérifier les valeurs
+                       request.resource.data.lue == true &&
+                       request.resource.data.dateLecture is string;
+      
+      // CRÉATION : Seul le backend peut créer (via Admin SDK)
+      allow create: if false;
+      
+      // SUPPRESSION : Interdite côté client
+      allow delete: if false;
+    }
+    
+    // ========================================
+    // RÈGLES POUR LA COLLECTION "users"
+    // ========================================
+    
+    match /users/{userEmail} {
+      
+      // LECTURE : L'utilisateur peut lire ses propres données
+      allow read: if request.auth != null && 
+                     request.auth.token.email == userEmail;
+      
+      // MISE À JOUR : L'utilisateur peut mettre à jour certains champs
+      allow update: if request.auth != null && 
+                       request.auth.token.email == userEmail &&
+                       // Autoriser uniquement certains champs
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['fcmToken', 'fcmTokenStatus', 'fcmTokenError', 
+                                   'fcmTokenDate', 'derniereConnexion']);
+      
+      // CRÉATION : Via le backend uniquement
+      allow create: if false;
+      
+      // SUPPRESSION : Interdite
+      allow delete: if false;
+    }
+    
+    // ========================================
+    // RÈGLES POUR LA COLLECTION "signalements"
+    // ========================================
+    
+    match /signalements/{signalementId} {
+      
+      // LECTURE : Tous les utilisateurs authentifiés
+      allow read: if request.auth != null;
+      
+      // CRÉATION : Utilisateurs authentifiés peuvent créer
+      allow create: if request.auth != null &&
+                       request.resource.data.email == request.auth.token.email;
+      
+      // MISE À JOUR : Uniquement l'auteur ou le backend
+      allow update: if request.auth != null &&
+                       (resource.data.email == request.auth.token.email ||
+                        // Backend via Admin SDK
+                        request.auth.uid != null);
+      
+      // SUPPRESSION : Interdite côté client
+      allow delete: if false;
+    }
+    
+    // ========================================
+    // RÈGLES POUR LA COLLECTION "types_signalement"
+    // ========================================
+    
+    match /types_signalement/{typeId} {
+      
+      // LECTURE : Tous les utilisateurs authentifiés
+      allow read: if request.auth != null;
+      
+      // ÉCRITURE : Interdite côté client
+      allow write: if false;
+    }
+    
+    // ========================================
+    // RÈGLE PAR DÉFAUT : TOUT INTERDIRE
+    // ========================================
+    
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
