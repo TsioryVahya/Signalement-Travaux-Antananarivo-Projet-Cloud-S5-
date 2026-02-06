@@ -1,0 +1,1 @@
+npm install @capacitor/local-notifications @capacitor/app @capacitor/core
