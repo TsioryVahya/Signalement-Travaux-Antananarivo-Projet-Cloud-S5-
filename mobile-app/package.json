@@ -21,6 +21,8 @@
     "vue-router": "^4.2.0"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.0.2",
+    "@capacitor/cli": "^8.0.2",
     "@vitejs/plugin-vue": "^4.2.0",
     "autoprefixer": "^10.4.23",
     "postcss": "^8.5.6",

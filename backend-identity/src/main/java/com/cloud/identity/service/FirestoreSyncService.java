@@ -589,7 +589,7 @@ public class FirestoreSyncService {
         try {
             // 1. Supprimer de Firestore (par ID document)
             firestore.collection("utilisateurs").document(postgresId).delete().get();
-            
+
             // 2. Supprimer de Firestore (par Email au cas où il était utilisé comme ID)
             firestore.collection("utilisateurs").document(email).delete().get();
 
@@ -609,7 +609,8 @@ public class FirestoreSyncService {
 
             System.out.println("✅ Utilisateur supprimé de Firestore et Firebase Auth : " + email);
         } catch (Exception e) {
-            System.err.println("⚠️ Erreur lors de la suppression complète de l'utilisateur " + email + " : " + e.getMessage());
+            System.err.println(
+                    "⚠️ Erreur lors de la suppression complète de l'utilisateur " + email + " : " + e.getMessage());
         }
     }
 
