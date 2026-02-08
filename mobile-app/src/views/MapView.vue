@@ -234,6 +234,9 @@ import {
   updateDoc
 } from 'firebase/firestore';
 import { store, setUser } from '../store';
+import { notificationService } from '../services/notificationService';
+import { auth } from '../firebase/config';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 
 // UI State
 const showLoginModal = ref(false);
@@ -355,6 +358,29 @@ const handleLogin = async () => {
 
       setUser(appUser);
       localStorage.setItem('app_user', JSON.stringify(appUser));
+      
+      console.log('✅ Connexion réussie, authentification Firebase Auth...');
+      
+      // Authentifier avec Firebase Auth pour permettre aux notifications de fonctionner
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        console.log('✅ Firebase Auth réussie');
+        
+        // Les notifications s'initialiseront automatiquement via onAuthStateChanged dans main.ts
+        console.log('✅ Les notifications vont s\'initialiser automatiquement...');
+      } catch (authError: any) {
+        console.warn('⚠️ Erreur Firebase Auth (normal si le compte n\'existe pas dans Firebase Auth):', authError.message);
+        console.log('💡 Tentative d\'initialisation manuelle des notifications...');
+        
+        // Fallback : initialiser manuellement si Firebase Auth échoue
+        try {
+          await notificationService.initialize();
+          await notificationService.loadNotifications();
+          console.log('✅ Service de notifications initialisé manuellement');
+        } catch (error) {
+          console.error('❌ Erreur lors de l\'initialisation manuelle des notifications:', error);
+        }
+      }
       
       showLoginModal.value = false;
       loginEmail.value = '';

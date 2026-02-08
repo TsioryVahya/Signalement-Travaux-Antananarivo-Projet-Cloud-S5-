@@ -4,6 +4,7 @@ import TabsPage from '../views/TabsPage.vue'
 import MapView from '../views/MapView.vue'
 import ListView from '../views/ListView.vue'
 import MyReportsView from '../views/MyReportsView.vue'
+import NotificationsView from '../views/NotificationsView.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
@@ -29,6 +30,10 @@ const routes: Array<RouteRecordRaw> = [
       {
         path: 'my-reports',
         component: MyReportsView
+      },
+      {
+        path: 'notifications',
+        component: NotificationsView
       }
     ]
   }
