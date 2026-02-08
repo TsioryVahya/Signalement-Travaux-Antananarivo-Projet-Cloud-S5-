@@ -1,6 +1,7 @@
 import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
 import { doc, setDoc, collection, query, where, orderBy, onSnapshot, Timestamp, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
+import { store } from '../store';
 import { ref, Ref } from 'vue';
 
 export interface Notification {
@@ -48,57 +49,59 @@ class NotificationService {
         return;
       }
 
-      if (!auth.currentUser) {
-        console.warn('⚠️ Utilisateur non connecté, impossible de sauvegarder le token');
+      // Utiliser soit Firebase Auth, soit le store custom
+      const userEmail = auth.currentUser?.email || store.user?.email;
+      const userId = auth.currentUser?.uid || store.user?.postgresId;
+
+      if (!userEmail || !userId) {
+        console.warn('⚠️ Utilisateur non identifié, impossible de sauvegarder le token');
         return;
+      }
+      
+      console.log('👤 Utilisateur:', userEmail);
+      console.log('🆔 ID utilisé:', userId);
+
+      // 1. Sauvegarder d'abord l'email dans Firestore (important pour le backend)
+      // On le fait avant getToken car getToken peut échouer en localhost
+      try {
+        const userDocRef = doc(db, 'users', userId);
+        await setDoc(userDocRef, {
+          email: userEmail,
+          lastTokenUpdate: Timestamp.now()
+        }, { merge: true });
+        console.log('✅ Email utilisateur sauvegardé dans Firestore');
+      } catch (err) {
+        console.error('❌ Erreur lors de la sauvegarde de l\'email dans Firestore:', err);
       }
       
       console.log('🔐 Tentative d\'obtention du FCM token...');
       
-      const currentToken = await getToken(this.messaging, {
-        vapidKey: 'BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI'
-      });
+      try {
+        const currentToken = await getToken(this.messaging, {
+          vapidKey: 'BMjmtEyox-Cq7673l2i68KbFeQQNRF6trQeuN4tfYHvwMBFbPoMtMgUL2FdX4MDd0XLm-PdCQLM-mZunRByy9tI'
+        });
 
-      if (currentToken) {
-        console.log('📱 FCM Token obtenu:', currentToken);
-        console.log('👤 Utilisateur:', auth.currentUser.email);
-        console.log('🆔 UID:', auth.currentUser.uid);
-        console.log('📋 Token complet à copier:');
-        console.log('─'.repeat(80));
-        console.log(currentToken);
-        console.log('─'.repeat(80));
-        
-        // Sauvegarder le token dans Firestore
-        const userDocRef = doc(db, 'users', auth.currentUser.uid);
-        await setDoc(userDocRef, {
-          fcmToken: currentToken,
-          lastTokenUpdate: Timestamp.now()
-        }, { merge: true });
-        
-        console.log('✅ FCM Token sauvegardé dans Firestore pour l\'utilisateur:', auth.currentUser.uid);
-        console.log('✅ Vérifiez Firebase Console > Firestore > users >', auth.currentUser.uid);
-      } else {
-        console.warn('⚠️ Impossible d\'obtenir le FCM token');
-        console.warn('💡 Cela peut être normal en développement local (localhost)');
-        console.warn('💡 Les notifications FCM nécessitent HTTPS en production');
+        if (currentToken) {
+          console.log('📱 FCM Token obtenu:', currentToken);
+          
+          // Sauvegarder le token dans Firestore
+          const userDocRef = doc(db, 'users', userId);
+          await setDoc(userDocRef, {
+            fcmToken: currentToken,
+            lastTokenUpdate: Timestamp.now()
+          }, { merge: true });
+          
+          console.log('✅ FCM Token sauvegardé dans Firestore pour l\'utilisateur:', userId);
+        } else {
+          console.warn('⚠️ Impossible d\'obtenir le FCM token');
+          console.warn('💡 Cela peut être normal en développement local (localhost)');
+        }
+      } catch (tokenError: any) {
+        console.warn('⚠️ Erreur lors de l\'obtention du FCM token (normal en localhost):', tokenError.message || tokenError);
+        console.warn('💡 L\'email est quand même sauvegardé, donc les notifications Firestore fonctionneront.');
       }
     } catch (error: any) {
-      console.error('❌ Erreur lors de la sauvegarde du FCM token:', error.code || error.message);
-      
-      if (error.code === 'messaging/permission-blocked') {
-        console.error('🚫 Permission de notification bloquée par l\'utilisateur');
-        console.error('💡 Réinitialisez les permissions du site dans les paramètres du navigateur');
-      } else if (error.message?.includes('AbortError') || error.message?.includes('push service error')) {
-        console.warn('⚠️ Erreur du service push (normal en localhost)');
-        console.warn('💡 Les notifications FCM nécessitent:');
-        console.warn('   1. HTTPS (ou localhost avec certificat)');
-        console.warn('   2. Service worker correctement enregistré');
-        console.warn('   3. Configuration VAPID valide');
-        console.warn('💡 En développement, vous pouvez ignorer cette erreur');
-        console.warn('💡 Les notifications fonctionneront en production avec HTTPS');
-      } else {
-        console.error('💡 Détails de l\'erreur:', error);
-      }
+      console.error('❌ Erreur globale dans saveFCMToken:', error.code || error.message);
     }
   }
 
@@ -107,14 +110,17 @@ class NotificationService {
 
     // Écouter les messages en premier plan
     onMessage(this.messaging, (payload) => {
-      console.log('📬 Message reçu:', payload);
+      console.log('📬 Message FCM reçu en premier plan:', payload);
       
       // Afficher une notification locale
       if (payload.notification) {
+        console.log('📢 Affichage notification locale:', payload.notification.title);
         new Notification(payload.notification.title || 'Nouvelle notification', {
           body: payload.notification.body,
           icon: '/assets/icon/favicon.png'
         });
+      } else {
+        console.log('⚠️ Message FCM reçu sans contenu de notification');
       }
       
       // Recharger les notifications
@@ -124,8 +130,10 @@ class NotificationService {
 
   async loadNotifications() {
     try {
-      if (!auth.currentUser) {
-        console.warn('⚠️ Utilisateur non connecté, impossible de charger les notifications');
+      const userId = auth.currentUser?.uid || store.user?.postgresId;
+
+      if (!userId) {
+        console.warn('⚠️ Utilisateur non identifié, impossible de charger les notifications');
         this.notifications.value = [];
         this.unreadCount.value = 0;
         return;
@@ -136,7 +144,7 @@ class NotificationService {
         this.unsubscribeSnapshot();
       }
 
-      console.log('📬 Chargement des notifications pour:', auth.currentUser.uid);
+      console.log('📬 Chargement des notifications pour:', userId);
 
       // Créer une requête pour les notifications de l'utilisateur
       const notificationsRef = collection(db, 'notifications');
@@ -144,16 +152,19 @@ class NotificationService {
       // Requête simple sans orderBy pour éviter l'erreur d'index
       const q = query(
         notificationsRef,
-        where('userId', '==', auth.currentUser.uid)
+        where('userId', '==', userId)
       );
 
       // Écouter les changements en temps réel
+      console.log('📡 Écoute des changements Firestore activée pour les notifications...');
       this.unsubscribeSnapshot = onSnapshot(q, (snapshot) => {
+        console.log(`🔔 Changement détecté dans Firestore (snapshot size: ${snapshot.size})`);
         const notifs: Notification[] = [];
         let unreadCount = 0;
 
         snapshot.forEach((doc) => {
           const data = doc.data();
+          console.log(`  📄 Notif ID: ${doc.id}, lu: ${data.lu}, titre: ${data.titre}`);
           const notif: Notification = {
             id: doc.id,
             userId: data.userId,
@@ -236,8 +247,7 @@ class NotificationService {
 
   // Méthode pour réessayer la sauvegarde du token si l'utilisateur s'est connecté après l'init
   async retryTokenSave() {
-    if (auth.currentUser && this.messaging) {
-      console.log('🔄 Tentative de sauvegarde du FCM token pour l\'utilisateur connecté');
+    if ((auth.currentUser || store.user) && this.messaging) {
       await this.saveFCMToken();
     }
   }

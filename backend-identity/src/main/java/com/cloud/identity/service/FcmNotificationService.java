@@ -89,8 +89,13 @@ public class FcmNotificationService {
                 return;
             }
 
+            // 1. Toujours créer l'enregistrement dans la collection notifications Firestore
+            // Cela permet à l'utilisateur de voir la notification dans l'app mobile même si le push FCM échoue
+            createNotificationRecord(userId, signalementId, oldStatus, newStatus);
+
+            // 2. Tenter d'envoyer la notification push FCM
             if (fcmToken == null || fcmToken.isEmpty()) {
-                logger.warn("⚠️ Aucun FCM token trouvé pour l'utilisateur {}", userId);
+                logger.warn("⚠️ Aucun FCM token trouvé pour l'utilisateur {}. La notification push ne sera pas envoyée, mais elle est enregistrée dans l'historique Firestore.", userId);
                 return;
             }
 
@@ -107,10 +112,6 @@ public class FcmNotificationService {
 
             // Envoyer la notification FCM
             sendNotification(fcmToken, titre, corps, data);
-
-            // Créer l'enregistrement dans la collection notifications
-            createNotificationRecord(userId, signalementId, oldStatus, newStatus);
-
         } catch (Exception e) {
             logger.error("❌ Erreur lors de l'envoi de la notification de changement de statut", e);
         }
