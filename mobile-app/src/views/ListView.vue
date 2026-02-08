@@ -151,10 +151,11 @@ const filteredSignalements = computed(() => {
   let list = store.signalements;
   
   // Filtre par utilisateur
-  if (filterMine.value && store.user) {
+  const user = store.user;
+  if (filterMine.value && user) {
     list = list.filter(s => 
-      s.email === store.user.email || 
-      s.utilisateur_id === store.user.postgresId
+      s.email === user.email || 
+      s.utilisateur_id === user.postgresId
     );
   }
   
