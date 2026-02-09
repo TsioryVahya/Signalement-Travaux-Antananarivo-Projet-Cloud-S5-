@@ -5,7 +5,8 @@ export interface Signalement {
   longitude: number;
   dateSignalement: any; // Correspond à date_signalement
   statut: string; // Correspond au nom dans statuts_signalement
-  email: string; // Utilisé pour retrouver utilisateur_id dans Postgres
+  email?: string; // Ancien champ
+  firebase_uid_utilisateur?: string; // Nouvel identifiant stable
   
   // Détails (Correspondent à la table signalements_details)
   description?: string;
@@ -23,6 +24,7 @@ export interface AppUser {
   role?: string;
   statut?: string;
   postgresId?: string;
+  firebaseUid?: string;
   expiresAt?: string;
 }
 

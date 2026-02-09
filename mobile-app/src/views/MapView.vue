@@ -263,7 +263,10 @@ let userLocationMarker: L.LayerGroup | null = null;
 
 const filteredSignalements = computed(() => {
   if (filterMine.value && store.user) {
-    return store.signalements.filter(s => s.email === store.user?.email);
+    return store.signalements.filter(s => 
+      (s.firebase_uid_utilisateur && s.firebase_uid_utilisateur === store.user?.firebaseUid) || 
+      (!s.firebase_uid_utilisateur && s.email === store.user?.email)
+    );
   }
   return store.signalements;
 });
@@ -356,6 +359,7 @@ const handleLogin = async () => {
         role: userData.role,
         statut: userData.statut,
         postgresId: userData.postgresId,
+        firebaseUid: userDoc.id, // L'ID du document est le Firebase UID
         expiresAt: expiresAt
       };
 
@@ -476,7 +480,8 @@ const submitReport = async () => {
       longitude: newSignalementPoint.value.lng,
       description: reportDescription.value,
       photo_url: reportPhotoUrl.value,
-      utilisateur_id: store.user.postgresId,
+      firebase_uid_utilisateur: store.user.firebaseUid || null, // Assurer que ce n'est pas undefined
+      email_utilisateur: store.user.email, // Ajouter l'email en secours
       id_type_signalement: selectedTypeId.value,
       statut: 'nouveau',
       entreprise: null,
@@ -604,7 +609,11 @@ const updateMarkers = () => {
             ${s.entreprise ? `<div class="text-[9px] text-blue-600 font-bold italic mb-1">Entreprise: ${s.entreprise}</div>` : ''}
             <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-50 flex justify-between">
               <span>${formatDate(s.dateSignalement)}</span>
-              <span class="font-bold text-blue-600">${s.email === store.user?.email ? 'Moi' : ''}</span>
+              <span class="font-bold text-blue-600">${
+                (s.firebase_uid_utilisateur && s.firebase_uid_utilisateur === store.user?.firebaseUid) || 
+                (!s.firebase_uid_utilisateur && s.email === store.user?.email) 
+                ? 'Moi' : ''
+              }</span>
             </div>
           </div>
         `);

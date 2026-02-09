@@ -41,6 +41,9 @@ public class Signalement {
     @JoinColumn(name = "utilisateur_id")
     private Utilisateur utilisateur;
 
+    @Column(name = "firebase_uid_utilisateur")
+    private String firebaseUidUtilisateur;
+
     @OneToOne(mappedBy = "signalement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private SignalementsDetail details;
 
@@ -114,6 +117,14 @@ public class Signalement {
 
     public void setUtilisateur(Utilisateur utilisateur) {
         this.utilisateur = utilisateur;
+    }
+
+    public String getFirebaseUidUtilisateur() {
+        return firebaseUidUtilisateur;
+    }
+
+    public void setFirebaseUidUtilisateur(String firebaseUidUtilisateur) {
+        this.firebaseUidUtilisateur = firebaseUidUtilisateur;
     }
 
 }

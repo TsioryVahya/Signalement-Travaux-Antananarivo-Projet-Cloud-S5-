@@ -89,7 +89,8 @@ CREATE TABLE signalements (
     statut_id INT REFERENCES statuts_signalement(id),
     latitude DOUBLE PRECISION NOT NULL,
     longitude DOUBLE PRECISION NOT NULL,
-    utilisateur_id UUID REFERENCES utilisateurs(id)
+    utilisateur_id UUID REFERENCES utilisateurs(id),
+    firebase_uid_utilisateur VARCHAR(255) -- UUID Firebase de l'utilisateur qui a créé le signalement
 );
 
 -- Table des Entreprises

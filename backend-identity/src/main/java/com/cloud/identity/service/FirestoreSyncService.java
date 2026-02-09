@@ -316,29 +316,40 @@ public class FirestoreSyncService {
                             return statutRepository.save(newStatut);
                         }));
 
-                // Gérer l'utilisateur
-                String utilisateurIdStr = document.getString("utilisateur_id");
-                if (utilisateurIdStr != null && !utilisateurIdStr.isEmpty()) {
-                    try {
-                        java.util.UUID utilisateurId = java.util.UUID.fromString(utilisateurIdStr);
-                        utilisateurRepository.findById(utilisateurId).ifPresent(s::setUtilisateur);
-                    } catch (Exception e) {
-                        System.err.println("ID utilisateur invalide dans Firestore: " + utilisateurIdStr);
+                // Gérer l'utilisateur (Priorité au Firebase UID car il est stable même si l'email change)
+                String firebaseUidUtilisateur = document.getString("firebase_uid_utilisateur");
+                if (firebaseUidUtilisateur != null && !firebaseUidUtilisateur.isEmpty()) {
+                    s.setFirebaseUidUtilisateur(firebaseUidUtilisateur); // On stocke le UID dans le signalement Postgres
+                    utilisateurRepository.findByFirebaseUid(firebaseUidUtilisateur).ifPresent(s::setUtilisateur);
+                }
+
+                // Fallback sur l'email si le Firebase UID n'est pas présent
+                if (s.getUtilisateur() == null) {
+                    String emailUtilisateur = document.getString("email_utilisateur");
+                    if (emailUtilisateur != null && !emailUtilisateur.isEmpty()) {
+                        utilisateurRepository.findByEmail(emailUtilisateur).ifPresent(s::setUtilisateur);
                     }
                 }
 
-                // Fallback sur l'email si l'utilisateur n'est pas encore lié
+                // Fallback sur l'ancien champ utilisateur_id si l'email n'est pas présent
+                if (s.getUtilisateur() == null) {
+                    String utilisateurIdStr = document.getString("utilisateur_id");
+                    if (utilisateurIdStr != null && !utilisateurIdStr.isEmpty()) {
+                        try {
+                            java.util.UUID utilisateurId = java.util.UUID.fromString(utilisateurIdStr);
+                            utilisateurRepository.findById(utilisateurId).ifPresent(s::setUtilisateur);
+                        } catch (Exception e) {
+                            System.err.println("ID utilisateur invalide dans Firestore: " + utilisateurIdStr);
+                        }
+                    }
+                }
+
+                // Fallback sur l'objet utilisateur imbriqué (si présent)
                 if (s.getUtilisateur() == null) {
                     Map<String, Object> userMap = (Map<String, Object>) document.get("utilisateur");
                     if (userMap != null && userMap.get("email") != null) {
                         String email = (String) userMap.get("email");
-                        s.setUtilisateur(utilisateurRepository.findByEmail(email)
-                                .orElseGet(() -> {
-                                    var newUser = new com.cloud.identity.entities.Utilisateur();
-                                    newUser.setEmail(email);
-                                    newUser.setMotDePasse("default_password");
-                                    return utilisateurRepository.save(newUser);
-                                }));
+                        utilisateurRepository.findByEmail(email).ifPresent(s::setUtilisateur);
                     }
                 }
 
