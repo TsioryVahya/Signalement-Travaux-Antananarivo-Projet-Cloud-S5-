@@ -5,10 +5,10 @@ import java.math.BigDecimal;
 public class SignalementDTO {
     @com.google.cloud.firestore.annotation.PropertyName("photo_url")
     private String photoUrl;
-    
+
     @com.google.cloud.firestore.annotation.PropertyName("surface_m2")
     private Double surfaceM2;
-    
+
     @com.google.cloud.firestore.annotation.PropertyName("entreprise_id")
     private Integer entrepriseId;
 
@@ -30,8 +30,8 @@ public class SignalementDTO {
     private String typeNom;
     private String typeIcone;
     private String typeCouleur;
-    private String email; 
-    
+    private String email;
+
     @com.google.cloud.firestore.annotation.PropertyName("utilisateur_id")
     private String utilisateurId;
 

@@ -204,9 +204,11 @@ public class FirestoreSyncService {
                     user.getDateDeblocageAutomatique() != null ? user.getDateDeblocageAutomatique().toString() : null);
 
             // LOG POUR DEBUG : On affiche ce qu'on envoie
-            System.out.println("📤 Sync vers Firestore [" + user.getEmail() + "] - FirebaseUID: " + user.getFirebaseUid());
+            System.out.println(
+                    "📤 Sync vers Firestore [" + user.getEmail() + "] - FirebaseUID: " + user.getFirebaseUid());
 
-            // Utiliser le Firebase UID comme ID de document si disponible, sinon l'ID Postgres
+            // Utiliser le Firebase UID comme ID de document si disponible, sinon l'ID
+            // Postgres
             String documentId = user.getFirebaseUid() != null ? user.getFirebaseUid() : user.getId().toString();
             usersCol.document(documentId).set(data).get();
         } catch (Exception e) {
@@ -316,10 +318,12 @@ public class FirestoreSyncService {
                             return statutRepository.save(newStatut);
                         }));
 
-                // Gérer l'utilisateur (Priorité au Firebase UID car il est stable même si l'email change)
+                // Gérer l'utilisateur (Priorité au Firebase UID car il est stable même si
+                // l'email change)
                 String firebaseUidUtilisateur = document.getString("firebase_uid_utilisateur");
                 if (firebaseUidUtilisateur != null && !firebaseUidUtilisateur.isEmpty()) {
-                    s.setFirebaseUidUtilisateur(firebaseUidUtilisateur); // On stocke le UID dans le signalement Postgres
+                    s.setFirebaseUidUtilisateur(firebaseUidUtilisateur); // On stocke le UID dans le signalement
+                                                                         // Postgres
                     utilisateurRepository.findByFirebaseUid(firebaseUidUtilisateur).ifPresent(s::setUtilisateur);
                 }
 

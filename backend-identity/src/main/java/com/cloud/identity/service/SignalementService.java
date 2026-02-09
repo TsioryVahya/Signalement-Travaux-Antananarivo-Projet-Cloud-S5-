@@ -459,13 +459,30 @@ public class SignalementService {
                 return;
             }
 
-            // Utiliser l'ID Postgres de l'utilisateur comme UID Firebase
-            // car le document dans la collection "users" est nommé avec cet ID
-            String userId = signalement.getUtilisateur().getId().toString();
-            System.out.println("🆔 Firebase UID (Postgres ID): " + userId);
+            // 1. Tenter de récupérer firebase_uid_utilisateur directement du document
+            // Firestore du signalement
+            String userId = getFirebaseUidFromSignalement(signalement.getIdFirebase());
+
+            // 2. Fallback sur l'ID Postgres si non trouvé
+            if (userId == null || userId.isEmpty()) {
+                System.out.println(
+                        "⚠️ firebase_uid_utilisateur non trouvé dans le document signalement, fallback sur l'ID Postgres");
+                userId = signalement.getUtilisateur().getId().toString();
+            }
+
+            // 3. Récupérer l'email à partir de l'UID Firebase (userId)
+            String userEmail = getEmailFromFirebaseUid(userId);
+            if (userEmail != null && !userEmail.isEmpty()) {
+                System.out.println("📧 Email récupéré à partir de l'UID: " + userEmail);
+            } else if (signalement.getUtilisateur() != null) {
+                userEmail = signalement.getUtilisateur().getEmail();
+                System.out.println("📧 Fallback sur l'email de l'entité Postgres: " + userEmail);
+            }
+
+            System.out.println("🆔 Firebase UID utilisé pour la notification: " + userId);
 
             if (userId == null || userId.isEmpty()) {
-                System.err.println("❌ Impossible de déterminer l'UID Firebase (ID Postgres manquant)");
+                System.err.println("❌ Impossible de déterminer l'UID Firebase");
                 return;
             }
 
@@ -475,7 +492,8 @@ public class SignalementService {
                     signalement.getIdFirebase(),
                     oldStatus,
                     newStatus,
-                    userId);
+                    userId,
+                    userEmail);
             System.out.println("✅ Notification envoyée avec succès");
         } catch (Exception e) {
             System.err.println("⚠️ Erreur lors de l'envoi de la notification: " + e.getMessage());
@@ -511,6 +529,56 @@ public class SignalementService {
         } catch (Exception e) {
             System.err.println("⚠️ Erreur lors de la récupération de l'ID Firebase: " + e.getMessage());
             e.printStackTrace();
+        }
+        return null;
+    }
+
+    /**
+     * Récupère l'email d'un utilisateur depuis son UID Firebase (ID du document
+     * dans collection users)
+     */
+    private String getEmailFromFirebaseUid(String firebaseUid) {
+        try {
+            System.out.println("🔍 Récupération de l'email pour l'UID Firebase: " + firebaseUid);
+            com.google.cloud.firestore.Firestore db = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            com.google.cloud.firestore.DocumentSnapshot doc = db.collection("users")
+                    .document(firebaseUid)
+                    .get()
+                    .get();
+
+            if (doc.exists()) {
+                String email = doc.getString("email");
+                System.out.println("✅ Email trouvé pour l'UID " + firebaseUid + ": " + email);
+                return email;
+            }
+        } catch (Exception e) {
+            System.err.println(
+                    "⚠️ Erreur lors de la récupération de l'email pour l'UID " + firebaseUid + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Récupère le firebase_uid_utilisateur depuis le document du signalement dans
+     * Firestore
+     */
+    private String getFirebaseUidFromSignalement(String signalementIdFirebase) {
+        try {
+            System.out.println(
+                    "🔍 Récupération du firebase_uid_utilisateur pour le signalement: " + signalementIdFirebase);
+            com.google.cloud.firestore.Firestore db = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            com.google.cloud.firestore.DocumentSnapshot doc = db.collection("signalements")
+                    .document(signalementIdFirebase)
+                    .get()
+                    .get();
+
+            if (doc.exists()) {
+                String uid = doc.getString("firebase_uid_utilisateur");
+                System.out.println("✅ firebase_uid_utilisateur trouvé: " + uid);
+                return uid;
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur lors de la récupération du firebase_uid_utilisateur: " + e.getMessage());
         }
         return null;
     }

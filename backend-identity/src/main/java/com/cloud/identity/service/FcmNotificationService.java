@@ -65,42 +65,65 @@ public class FcmNotificationService {
     /**
      * Envoie une notification de changement de statut
      * 
-     * @param userId        ID de l'utilisateur Firebase
+     * @param userId        ID de l'utilisateur Firebase (UID)
+     * @param userEmail     Email de l'utilisateur (utilisé comme fallback pour
+     *                      trouver l'UID si nécessaire)
      * @param signalementId ID du signalement
      * @param oldStatus     Ancien statut
      * @param newStatus     Nouveau statut
      */
-    public void sendStatusChangeNotification(String userId, String signalementId,
+    public void sendStatusChangeNotification(String userId, String userEmail, String signalementId,
             String oldStatus, String newStatus) {
         try {
-            logger.info("📬 Préparation notification pour userId={}, signalement={}, {} -> {}",
-                    userId, signalementId, oldStatus, newStatus);
+            logger.info("📬 Préparation notification pour userId={}, email={}, signalement={}, {} -> {}",
+                    userId, userEmail, signalementId, oldStatus, newStatus);
 
-            // Récupérer le FCM token de l'utilisateur depuis Firestore
             Firestore db = FirestoreClient.getFirestore();
-            DocumentReference userDoc = db.collection("users").document(userId);
-
+            String finalUserId = userId;
             String fcmToken = null;
-            try {
-                Map<String, Object> userData = userDoc.get().get().getData();
-                if (userData != null && userData.containsKey("fcmToken")) {
-                    fcmToken = (String) userData.get("fcmToken");
+
+            // 1. Tenter de récupérer par UID
+            if (finalUserId != null && !finalUserId.isEmpty()) {
+                try {
+                    DocumentReference userDoc = db.collection("users").document(finalUserId);
+                    Map<String, Object> userData = userDoc.get().get().getData();
+                    if (userData != null && userData.containsKey("fcmToken")) {
+                        fcmToken = (String) userData.get("fcmToken");
+                        logger.info("✅ FCM token trouvé via UID: {}", finalUserId);
+                    }
+                } catch (Exception e) {
+                    logger.warn("⚠️ Impossible de trouver l'utilisateur par UID: {}", finalUserId);
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                logger.error("❌ Erreur lors de la récupération du FCM token", e);
-                return;
             }
 
-            // 1. Toujours créer l'enregistrement dans la collection notifications Firestore
-            // Cela permet à l'utilisateur de voir la notification dans l'app mobile même si
-            // le push FCM échoue
-            createNotificationRecord(userId, signalementId, oldStatus, newStatus);
+            // 2. Si non trouvé par UID, tenter par Email
+            if ((fcmToken == null || fcmToken.isEmpty()) && userEmail != null && !userEmail.isEmpty()) {
+                logger.info("🔍 Recherche du FCM token via email: {}", userEmail);
+                try {
+                    com.google.cloud.firestore.QuerySnapshot query = db.collection("users")
+                            .whereEqualTo("email", userEmail)
+                            .limit(1)
+                            .get()
+                            .get();
 
-            // 2. Tenter d'envoyer la notification push FCM
+                    if (!query.isEmpty()) {
+                        com.google.cloud.firestore.QueryDocumentSnapshot doc = query.getDocuments().get(0);
+                        finalUserId = doc.getId(); // On met à jour l'UID pour l'enregistrement Firestore
+                        fcmToken = doc.getString("fcmToken");
+                        logger.info("✅ FCM token trouvé via Email. UID mis à jour: {}", finalUserId);
+                    }
+                } catch (Exception e) {
+                    logger.error("❌ Erreur lors de la recherche par email", e);
+                }
+            }
+
+            // 3. Toujours créer l'enregistrement dans la collection notifications Firestore
+            // On utilise le finalUserId (soit l'UID original, soit celui trouvé par email)
+            createNotificationRecord(finalUserId, signalementId, oldStatus, newStatus);
+
+            // 4. Tenter d'envoyer la notification push FCM
             if (fcmToken == null || fcmToken.isEmpty()) {
-                logger.warn(
-                        "⚠️ Aucun FCM token trouvé pour l'utilisateur {}. La notification push ne sera pas envoyée, mais elle est enregistrée dans l'historique Firestore.",
-                        userId);
+                logger.warn("⚠️ Aucun FCM token trouvé pour l'utilisateur {}. Push non envoyé.", finalUserId);
                 return;
             }
 
@@ -153,18 +176,16 @@ public class FcmNotificationService {
 
     /**
      * Envoie une notification à tous les utilisateurs ayant signalé un problème
-     * 
-     * @param signalementId ID du signalement
-     * @param nouveauStatut Nouveau statut
      */
-    public void notifyStatusChange(String signalementId, String oldStatus, String newStatus, String userId) {
-        logger.info("🔔 Notification de changement de statut: {} -> {} pour signalement {} (user: {})",
-                oldStatus, newStatus, signalementId, userId);
+    public void notifyStatusChange(String signalementId, String oldStatus, String newStatus, String userId,
+            String userEmail) {
+        logger.info("🔔 Notification de changement de statut: {} -> {} pour signalement {} (user: {}, email: {})",
+                oldStatus, newStatus, signalementId, userId, userEmail);
 
-        if (userId != null && !userId.isEmpty()) {
-            sendStatusChangeNotification(userId, signalementId, oldStatus, newStatus);
+        if ((userId != null && !userId.isEmpty()) || (userEmail != null && !userEmail.isEmpty())) {
+            sendStatusChangeNotification(userId, userEmail, signalementId, oldStatus, newStatus);
         } else {
-            logger.warn("⚠️ UserId manquant, impossible d'envoyer la notification");
+            logger.warn("⚠️ UserId et Email manquants, impossible d'envoyer la notification");
         }
     }
 }
