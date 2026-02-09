@@ -1,6 +1,5 @@
 package com.cloud.identity.service;
 
-
 import com.cloud.identity.dto.SignalementDTO;
 import com.cloud.identity.entities.Entreprise;
 import com.cloud.identity.entities.Signalement;
@@ -51,19 +50,25 @@ public class SignalementService {
     @Autowired
     private FirestoreSyncService firestoreSyncService;
 
+    @Autowired
+    private FcmNotificationService fcmNotificationService;
+
     @Transactional
     public Map<String, Integer> synchroniserDonnees() {
         System.out.println("🚀 Début de l'opération de synchronisation globale...");
-        
-        // 0. Synchroniser les utilisateurs d'abord (important pour lier les signalements)
+
+        // 0. Synchroniser les utilisateurs d'abord (important pour lier les
+        // signalements)
         System.out.println("👥 Étape 0 : Synchronisation des utilisateurs...");
         firestoreSyncService.syncUsersFromFirestoreToPostgres();
 
         // 1. D'abord on ramène ce qui est nouveau sur Mobile vers Postgres
         Map<String, Integer> result = firestoreSyncService.syncFromFirestoreToPostgres();
-        System.out.println("✅ Étape 1 terminée : " + result.getOrDefault("signalements", 0) + " signalements récupérés de Firestore.");
-        
-        // 2. Ensuite on s'assure que ce qui a été modifié sur le Web est renvoyé vers Firestore
+        System.out.println("✅ Étape 1 terminée : " + result.getOrDefault("signalements", 0)
+                + " signalements récupérés de Firestore.");
+
+        // 2. Ensuite on s'assure que ce qui a été modifié sur le Web est renvoyé vers
+        // Firestore
         System.out.println("🔄 Étape 2 : Synchronisation des modifications locales vers Firestore...");
         List<Signalement> signalementsWithFirebase = signalementRepository.findAll();
         int syncedBack = 0;
@@ -74,7 +79,7 @@ public class SignalementService {
             }
         }
         System.out.println("✅ Étape 2 terminée : " + syncedBack + " signalements mis à jour dans Firestore.");
-        
+
         return result;
     }
 
@@ -87,7 +92,7 @@ public class SignalementService {
             dto.setLongitude(s.getLongitude());
             dto.setIdFirebase(s.getIdFirebase());
             dto.setDateSignalement(s.getDateSignalement());
-            
+
             // On renvoie le NOM du statut pour le dashboard web
             if (s.getStatut() != null) {
                 dto.setStatut(s.getStatut().getNom());
@@ -105,7 +110,8 @@ public class SignalementService {
             // Récupérer les détails via la relation fetchée ou fallback repository
             SignalementsDetail d = s.getDetails();
             if (d == null) {
-                // Fallback si la relation n'est pas chargée (peut arriver selon l'état de l'entité)
+                // Fallback si la relation n'est pas chargée (peut arriver selon l'état de
+                // l'entité)
                 d = detailsRepository.findBySignalement(s).orElse(null);
             }
 
@@ -142,8 +148,8 @@ public class SignalementService {
 
     @Transactional
     public void creerSignalement(Double latitude, Double longitude, String description, String email,
-                                 Double surfaceM2, BigDecimal budget, String entrepriseNom, String photoUrl,
-                                 Integer typeId) throws Exception {
+            Double surfaceM2, BigDecimal budget, String entrepriseNom, String photoUrl,
+            Integer typeId) throws Exception {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
 
@@ -171,7 +177,7 @@ public class SignalementService {
         details.setDescription(description);
         details.setSurfaceM2(surfaceM2);
         details.setBudget(budget);
-        
+
         if (entrepriseNom != null && !entrepriseNom.isEmpty()) {
             Entreprise entreprise = entrepriseRepository.findByNom(entrepriseNom)
                     .orElseGet(() -> {
@@ -181,9 +187,9 @@ public class SignalementService {
                     });
             details.setEntreprise(entreprise);
         }
-        
+
         details.setPhotoUrl(photoUrl);
-        
+
         detailsRepository.save(details);
         s.setDetails(details);
 
@@ -197,11 +203,14 @@ public class SignalementService {
 
     @Transactional
     public void modifierSignalement(UUID id, Double latitude, Double longitude, Integer statutId,
-                                    String description, Double surfaceM2, BigDecimal budget,
-                                    String entrepriseNom, String photoUrl, Integer typeId) throws Exception {
+            String description, Double surfaceM2, BigDecimal budget,
+            String entrepriseNom, String photoUrl, Integer typeId) throws Exception {
         Signalement s = signalementRepository.findById(id)
                 .orElseThrow(() -> new Exception("Signalement non trouvé"));
-        
+
+        // Récupérer l'ancien statut pour la notification
+        String oldStatut = s.getStatut() != null ? s.getStatut().getNom() : null;
+
         StatutsSignalement statut = statutRepository.findById(statutId)
                 .orElseThrow(() -> new Exception("Statut non trouvé"));
 
@@ -224,11 +233,11 @@ public class SignalementService {
                     newDetails.setSignalement(s);
                     return newDetails;
                 });
-        
+
         details.setDescription(description);
         details.setSurfaceM2(surfaceM2);
         details.setBudget(budget);
-        
+
         if (entrepriseNom != null && !entrepriseNom.isEmpty()) {
             Entreprise entreprise = entrepriseRepository.findByNom(entrepriseNom)
                     .orElseGet(() -> {
@@ -240,16 +249,22 @@ public class SignalementService {
         } else {
             details.setEntreprise(null);
         }
-        
+
         if (photoUrl != null && !photoUrl.isEmpty()) {
             details.setPhotoUrl(photoUrl);
         }
-        
+
         s.setDetails(details);
         detailsRepository.save(details);
 
         // Synchronisation Firebase
         firestoreSyncService.syncSignalementToFirebase(s);
+
+        // Envoyer une notification si le statut a changé
+        String newStatut = statut.getNom();
+        if (oldStatut != null && !oldStatut.equals(newStatut)) {
+            sendStatusChangeNotification(s, oldStatut, newStatut);
+        }
     }
 
     @Transactional
@@ -275,7 +290,7 @@ public class SignalementService {
         s.setLatitude(dto.getLatitude());
         s.setLongitude(dto.getLongitude());
         s.setIdFirebase(dto.getIdFirebase());
-        
+
         if (dto.getDateSignalement() != null) {
             try {
                 Object dateObj = dto.getDateSignalement();
@@ -285,7 +300,8 @@ public class SignalementService {
                     s.setDateSignalement(Instant.parse(dateObj.toString()));
                 }
             } catch (Exception e) {
-                System.err.println("Erreur lors du parsing de la date : " + dto.getDateSignalement() + ". Utilisation de la date actuelle.");
+                System.err.println("Erreur lors du parsing de la date : " + dto.getDateSignalement()
+                        + ". Utilisation de la date actuelle.");
                 s.setDateSignalement(Instant.now());
             }
         } else {
@@ -359,7 +375,7 @@ public class SignalementService {
         SignalementsDetail details = new SignalementsDetail();
         details.setSignalement(s);
         details.setDescription(dto.getDescription());
-        
+
         // Gestion de la surface (peut être Long ou Double dans Firestore)
         if (dto.getSurfaceM2() != null) {
             try {
@@ -368,7 +384,7 @@ public class SignalementService {
                 System.err.println("Erreur conversion surfaceM2 : " + dto.getSurfaceM2());
             }
         }
-        
+
         // Gestion du budget (peut être String ou Number)
         if (dto.getBudget() != null) {
             try {
@@ -377,7 +393,7 @@ public class SignalementService {
                 System.err.println("Erreur conversion budget : " + dto.getBudget());
             }
         }
-        
+
         if (dto.getEntrepriseNom() != null && !dto.getEntrepriseNom().isEmpty()) {
             final String entNom = dto.getEntrepriseNom();
             Entreprise entreprise = entrepriseRepository.findByNom(entNom)
@@ -388,7 +404,7 @@ public class SignalementService {
                     });
             details.setEntreprise(entreprise);
         }
-        
+
         details.setPhotoUrl(dto.getPhotoUrl());
 
         s.setDetails(details);
@@ -401,16 +417,101 @@ public class SignalementService {
     public void validerSignalement(UUID signalementId) throws Exception {
         Signalement s = signalementRepository.findById(signalementId)
                 .orElseThrow(() -> new Exception("Signalement non trouvé"));
-        
+
+        // Récupérer l'ancien statut
+        String oldStatut = s.getStatut() != null ? s.getStatut().getNom() : null;
+
         StatutsSignalement statutEnCours = statutRepository.findByNom("en cours")
                 .orElseGet(() -> {
                     StatutsSignalement newStatut = new StatutsSignalement();
                     newStatut.setNom("en cours");
                     return statutRepository.save(newStatut);
                 });
-        
+
         s.setStatut(statutEnCours);
         signalementRepository.save(s);
-        // La mise à jour Firebase est maintenant automatique via SignalementEntityListener
+        // La mise à jour Firebase est maintenant automatique via
+        // SignalementEntityListener
+
+        // Envoyer une notification de changement de statut
+        sendStatusChangeNotification(s, oldStatut, "en cours");
+    }
+
+    /**
+     * Envoie une notification de changement de statut à l'utilisateur
+     */
+    private void sendStatusChangeNotification(Signalement signalement, String oldStatus, String newStatus) {
+        try {
+            System.out.println("🔔 sendStatusChangeNotification appelé");
+            System.out.println("   - Signalement ID: " + signalement.getId());
+            System.out.println("   - ID Firebase: " + signalement.getIdFirebase());
+            System.out.println("   - Utilisateur: "
+                    + (signalement.getUtilisateur() != null ? signalement.getUtilisateur().getEmail() : "NULL"));
+            System.out.println("   - Changement: " + oldStatus + " -> " + newStatus);
+
+            if (signalement.getUtilisateur() == null) {
+                System.err.println("❌ Pas d'utilisateur associé au signalement");
+                return;
+            }
+
+            if (signalement.getIdFirebase() == null || signalement.getIdFirebase().isEmpty()) {
+                System.err.println("❌ Pas d'ID Firebase pour le signalement");
+                return;
+            }
+
+            // Utiliser l'ID Postgres de l'utilisateur comme UID Firebase
+            // car le document dans la collection "users" est nommé avec cet ID
+            String userId = signalement.getUtilisateur().getId().toString();
+            System.out.println("🆔 Firebase UID (Postgres ID): " + userId);
+
+            if (userId == null || userId.isEmpty()) {
+                System.err.println("❌ Impossible de déterminer l'UID Firebase (ID Postgres manquant)");
+                return;
+            }
+
+            // Envoyer la notification via le service FCM
+            System.out.println("📤 Envoi de la notification via FcmNotificationService...");
+            fcmNotificationService.notifyStatusChange(
+                    signalement.getIdFirebase(),
+                    oldStatus,
+                    newStatus,
+                    userId);
+            System.out.println("✅ Notification envoyée avec succès");
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur lors de l'envoi de la notification: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Récupère l'ID Firebase d'un utilisateur à partir de son email
+     * 
+     * @deprecated Utiliser directement l'ID Postgres qui est l'ID du document dans
+     *             Firestore
+     */
+    @Deprecated
+    private String getUserFirebaseId(String email) {
+        try {
+            System.out.println("🔍 Recherche de l'UID Firebase pour l'email: " + email);
+
+            com.google.cloud.firestore.Firestore db = com.google.firebase.cloud.FirestoreClient.getFirestore();
+            com.google.cloud.firestore.QuerySnapshot querySnapshot = db.collection("users")
+                    .whereEqualTo("email", email)
+                    .limit(1)
+                    .get()
+                    .get();
+
+            if (!querySnapshot.isEmpty()) {
+                String uid = querySnapshot.getDocuments().get(0).getId();
+                System.out.println("✅ UID trouvé: " + uid);
+                return uid;
+            } else {
+                System.err.println("❌ Aucun utilisateur trouvé dans Firestore avec l'email: " + email);
+            }
+        } catch (Exception e) {
+            System.err.println("⚠️ Erreur lors de la récupération de l'ID Firebase: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -24,9 +24,26 @@ import '@ionic/vue/css/text-transformation.css';
 import '@ionic/vue/css/flex-utils.css';
 import '@ionic/vue/css/display.css';
 
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth } from './firebase/config';
+import { notificationService } from './services/notificationService';
+
 const app = createApp(App)
   .use(IonicVue)
   .use(router);
+
+// Initialiser les notifications lors du changement d'état d'authentification
+onAuthStateChanged(auth, async (user) => {
+  if (user) {
+    console.log('👤 Utilisateur connecté, initialisation des notifications...');
+    await notificationService.initialize();
+    await notificationService.retryTokenSave();
+    await notificationService.loadNotifications();
+  } else {
+    console.log('👤 Utilisateur déconnecté, nettoyage des notifications...');
+    notificationService.cleanup();
+  }
+});
 
 router.isReady().then(() => {
   app.mount('#app');

@@ -15,6 +15,14 @@
           </ion-badge>
           <ion-label class="hidden-label">Liste</ion-label>
         </ion-tab-button>
+
+        <ion-tab-button tab="notifications" href="/tabs/notifications">
+          <ion-icon :icon="notificationsOutline" />
+          <ion-badge v-if="notificationService.unreadCount.value > 0" color="danger" class="custom-badge">
+            {{ notificationService.unreadCount.value }}
+          </ion-badge>
+          <ion-label class="hidden-label">Notifications</ion-label>
+        </ion-tab-button>
       </ion-tab-bar>
     </ion-tabs>
   </ion-page>
@@ -22,8 +30,9 @@
 
 <script setup lang="ts">
 import { IonPage, IonTabs, IonRouterOutlet, IonTabBar, IonTabButton, IonIcon, IonLabel, IonBadge } from '@ionic/vue';
-import { mapOutline, listOutline } from 'ionicons/icons';
+import { mapOutline, listOutline, notificationsOutline } from 'ionicons/icons';
 import { store } from '../store';
+import { notificationService } from '../services/notificationService';
 </script>
 
 
