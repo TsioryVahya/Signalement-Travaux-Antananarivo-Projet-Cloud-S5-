@@ -134,7 +134,7 @@
                                 <div class="text-sm text-slate-600 max-w-xs truncate font-medium" title="\${s.description || '-'}">
                                     \${s.description || '<span class="text-slate-300 italic">Sans description</span>'}
                                 </div>
-                                <div class="text-[10px] text-slate-400 mt-0.5">\${s.utilisateur?.email || 'Anonyme'}</div>
+                                <div class="text-[10px] text-slate-400 mt-0.5">\${s.utilisateur?.email || ''}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-sm font-semibold text-slate-700">\${budget}</div>

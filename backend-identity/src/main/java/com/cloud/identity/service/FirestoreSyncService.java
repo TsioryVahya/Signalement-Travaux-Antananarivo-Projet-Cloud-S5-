@@ -342,19 +342,16 @@ public class FirestoreSyncService {
                 // Fallback sur l'email si l'utilisateur n'est pas encore lié
                 if (s.getUtilisateur() == null) {
                     Map<String, Object> userMap = (Map<String, Object>) document.get("utilisateur");
-                    String email = "anonyme@routier.mg";
                     if (userMap != null && userMap.get("email") != null) {
-                        email = (String) userMap.get("email");
+                        String email = (String) userMap.get("email");
+                        s.setUtilisateur(utilisateurRepository.findByEmail(email)
+                                .orElseGet(() -> {
+                                    var newUser = new com.cloud.identity.entities.Utilisateur();
+                                    newUser.setEmail(email);
+                                    newUser.setMotDePasse("default_password");
+                                    return utilisateurRepository.save(newUser);
+                                }));
                     }
-
-                    final String finalEmail = email;
-                    s.setUtilisateur(utilisateurRepository.findByEmail(finalEmail)
-                            .orElseGet(() -> {
-                                var newUser = new com.cloud.identity.entities.Utilisateur();
-                                newUser.setEmail(finalEmail);
-                                newUser.setMotDePasse("default_password");
-                                return utilisateurRepository.save(newUser);
-                            }));
                 }
 
                 // Gérer le type de signalement

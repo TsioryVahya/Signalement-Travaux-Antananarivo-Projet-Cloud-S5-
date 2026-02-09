@@ -245,7 +245,7 @@
                   <div class="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center text-[8px] font-black text-slate-400">
                     {{ (s.utilisateur?.email || 'A').charAt(0).toUpperCase() }}
                   </div>
-                  <span class="text-[10px] font-bold text-slate-400 truncate">{{ s.utilisateur?.email || 'Anonyme' }}</span>
+                  <span class="text-[10px] font-bold text-slate-400 truncate">{{ s.utilisateur?.email || '' }}</span>
                 </div>
               </div>
             </td>
