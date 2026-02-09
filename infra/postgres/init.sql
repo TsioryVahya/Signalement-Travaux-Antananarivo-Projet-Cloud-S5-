@@ -137,13 +137,14 @@ INSERT INTO entreprises (nom, description) VALUES
 
 -- Insertion du compte Manager par défaut
 -- Mot de passe: manager123
-INSERT INTO utilisateurs (email, mot_de_passe, role_id, statut_actuel_id, date_derniere_modification) 
+INSERT INTO utilisateurs (email, mot_de_passe, role_id, statut_actuel_id, date_derniere_modification, firebase_uid) 
 VALUES (
     'manager@routier.mg', 
     'manager123', 
     (SELECT id FROM roles WHERE nom = 'MANAGER'),
     (SELECT id FROM statuts_utilisateur WHERE nom = 'ACTIF'),
-    CURRENT_TIMESTAMP
+    CURRENT_TIMESTAMP,
+    'manager-firebase-uid-default'
 )
 ON CONFLICT (email) DO NOTHING;
 
@@ -189,3 +190,23 @@ INSERT INTO types_signalement (nom, description, icone_path, couleur) VALUES
     'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9c-1.66 0-3-1.34-3-3 0-.97.46-1.84 1.18-2.39.1.74.31 1.43.62 2.06.33.66.76 1.26 1.27 1.77.07.07.13.14.2.21-.08.22-.27.35-.27.35z',
     '#0288D1'
 );
+
+-- Insertion de l'utilisateur Tsiory (Donnée d'initialisation)
+INSERT INTO utilisateurs (id, email, mot_de_passe, role_id, statut_actuel_id, date_derniere_modification, firebase_uid) 
+VALUES (
+    '6df75176-449f-4aae-b8d1-dfbcc8feecfe', 
+    'tsiory@gmail.com', 
+    'tsiory123', 
+    (SELECT id FROM roles WHERE nom = 'UTILISATEUR'),
+    (SELECT id FROM statuts_utilisateur WHERE nom = 'ACTIF'),
+    '2026-02-09 16:29:46',
+    'tsiory-firebase-uid-6df75176' -- UID Firebase généré pour l'initialisation
+)
+ON CONFLICT (email) DO UPDATE SET 
+    id = EXCLUDED.id,
+    firebase_uid = EXCLUDED.firebase_uid;
+
+-- Ajout à l'historique pour Tsiory
+INSERT INTO historique_utilisateur (utilisateur_id, statut_id)
+SELECT id, statut_actuel_id FROM utilisateurs WHERE email = 'tsiory@gmail.com'
+ON CONFLICT DO NOTHING;
