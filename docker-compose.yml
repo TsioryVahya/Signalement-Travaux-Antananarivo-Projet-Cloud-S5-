@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: cloud-s5-db
+    restart: always
+    environment:
+      POSTGRES_USER: user_cloud
+      POSTGRES_PASSWORD: password_cloud
+      POSTGRES_DB: routier_db
+    ports:
+      - "5433:5432"  # <--- changé ici, port hôte 5433, conteneur 5432
+    volumes:
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data
+
+  tileserver:
+    image: maptiler/tileserver-gl
+    container_name: cloud-s5-tileserver
+    restart: always
+    ports:
+      - "8082:8080"
+    command: ["osm-2020-02-10-v3.11_madagascar_antananarivo.mbtiles"]
+    volumes:
+      - ./infra/tileserver:/data
+
+  backend:
+    build: ./backend-identity
+    container_name: cloud-s5-backend
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/routier_db
+      - SPRING_DATASOURCE_USERNAME=user_cloud
+      - SPRING_DATASOURCE_PASSWORD=password_cloud
+    depends_on:
+      - db
+
+  web:
+    build: ./web-app
+    container_name: cloud-s5-web
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: cloud-s5-pgadmin
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@routier.mg
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+volumes:
+  db_data:
+  pgadmin_data:
