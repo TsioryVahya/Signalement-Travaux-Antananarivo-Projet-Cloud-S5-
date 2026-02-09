@@ -5,6 +5,15 @@ import java.math.BigDecimal;
 public class SignalementDTO {
     @com.google.cloud.firestore.annotation.PropertyName("photo_url")
     private String photoUrl;
+
+    private java.util.List<GalerieItemDTO> galerie;
+
+    public static class GalerieItemDTO {
+        private String url;
+        public GalerieItemDTO(String url) { this.url = url; }
+        public String getUrl() { return url; }
+        public void setUrl(String url) { this.url = url; }
+    }
     
     @com.google.cloud.firestore.annotation.PropertyName("surface_m2")
     private Double surfaceM2;
@@ -132,6 +141,14 @@ public class SignalementDTO {
     @com.google.cloud.firestore.annotation.PropertyName("photo_url")
     public void setPhotoUrl(String photoUrl) {
         this.photoUrl = photoUrl;
+    }
+
+    public java.util.List<GalerieItemDTO> getGalerie() {
+        return galerie;
+    }
+
+    public void setGalerie(java.util.List<GalerieItemDTO> galerie) {
+        this.galerie = galerie;
     }
 
     @com.google.cloud.firestore.annotation.PropertyName("surface_m2")

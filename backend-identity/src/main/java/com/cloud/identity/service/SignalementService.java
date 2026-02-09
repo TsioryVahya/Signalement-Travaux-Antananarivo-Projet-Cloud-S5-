@@ -2,12 +2,14 @@ package com.cloud.identity.service;
 
 import com.cloud.identity.dto.SignalementDTO;
 import com.cloud.identity.entities.Entreprise;
+import com.cloud.identity.entities.GalerieSignalement;
 import com.cloud.identity.entities.Signalement;
 import com.cloud.identity.entities.SignalementsDetail;
 import com.cloud.identity.entities.StatutsSignalement;
 import com.cloud.identity.entities.TypeSignalement;
 import com.cloud.identity.entities.Utilisateur;
 import com.cloud.identity.repository.EntrepriseRepository;
+import com.cloud.identity.repository.GalerieSignalementRepository;
 import com.cloud.identity.repository.SignalementRepository;
 import com.cloud.identity.repository.SignalementsDetailRepository;
 import com.cloud.identity.repository.StatutsSignalementRepository;
@@ -39,13 +41,16 @@ public class SignalementService {
     private StatutsSignalementRepository statutRepository;
 
     @Autowired
-    private TypeSignalementRepository typeSignalementRepository;
+    private UtilisateurRepository utilisateurRepository;
 
     @Autowired
     private EntrepriseRepository entrepriseRepository;
 
     @Autowired
-    private UtilisateurRepository utilisateurRepository;
+    private TypeSignalementRepository typeSignalementRepository;
+
+    @Autowired
+    private GalerieSignalementRepository galerieRepository;
 
     @Autowired
     private FirestoreSyncService firestoreSyncService;
@@ -122,7 +127,14 @@ public class SignalementService {
                 dto.setBudget(d.getBudget());
                 dto.setEntrepriseId(d.getEntreprise() != null ? d.getEntreprise().getId() : null);
                 dto.setEntrepriseNom(d.getEntreprise() != null ? d.getEntreprise().getNom() : null);
-                dto.setPhotoUrl(d.getPhotoUrl());
+                
+                // Remplir la galerie dans le DTO
+                if (s.getGalerie() != null && !s.getGalerie().isEmpty()) {
+                    dto.setGalerie(s.getGalerie().stream()
+                        .map(g -> new SignalementDTO.GalerieItemDTO(g.getPhotoUrl()))
+                        .collect(Collectors.toList()));
+                    dto.setPhotoUrl(s.getGalerie().get(0).getPhotoUrl());
+                }
             } else {
                 System.out.println("⚠️ Aucun détail trouvé pour le signalement : " + s.getId());
             }
@@ -148,7 +160,7 @@ public class SignalementService {
 
     @Transactional
     public void creerSignalement(Double latitude, Double longitude, String description, String email,
-            Double surfaceM2, BigDecimal budget, String entrepriseNom, String photoUrl,
+            Double surfaceM2, BigDecimal budget, String entrepriseNom, List<String> photos,
             Integer typeId) throws Exception {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new Exception("Utilisateur non trouvé"));
@@ -188,7 +200,22 @@ public class SignalementService {
             details.setEntreprise(entreprise);
         }
 
-        details.setPhotoUrl(photoUrl);
+        if (photos != null && !photos.isEmpty()) {
+            List<GalerieSignalement> galerie = new java.util.ArrayList<>();
+            for (String url : photos) {
+                GalerieSignalement g = new GalerieSignalement();
+                g.setSignalement(s);
+                g.setPhotoUrl(url);
+                g.setDateAjout(Instant.now());
+                galerie.add(g);
+            }
+            galerieRepository.saveAll(galerie);
+            s.setGalerie(galerie);
+            // On peut définir la première photo comme photo principale si besoin
+            if (!galerie.isEmpty()) {
+                details.setGalerie(galerie.get(0));
+            }
+        }
 
         detailsRepository.save(details);
         s.setDetails(details);
@@ -204,7 +231,7 @@ public class SignalementService {
     @Transactional
     public void modifierSignalement(UUID id, Double latitude, Double longitude, Integer statutId,
             String description, Double surfaceM2, BigDecimal budget,
-            String entrepriseNom, String photoUrl, Integer typeId) throws Exception {
+            String entrepriseNom, List<String> photos, Integer typeId) throws Exception {
         Signalement s = signalementRepository.findById(id)
                 .orElseThrow(() -> new Exception("Signalement non trouvé"));
 
@@ -250,11 +277,29 @@ public class SignalementService {
             details.setEntreprise(null);
         }
 
-        if (photoUrl != null && !photoUrl.isEmpty()) {
-            details.setPhotoUrl(photoUrl);
+        if (photos != null) {
+            // Supprimer l'ancienne galerie
+            List<GalerieSignalement> oldGalerie = galerieRepository.findBySignalement(s);
+            galerieRepository.deleteAll(oldGalerie);
+
+            List<GalerieSignalement> newGalerie = new java.util.ArrayList<>();
+            for (String url : photos) {
+                GalerieSignalement g = new GalerieSignalement();
+                g.setSignalement(s);
+                g.setPhotoUrl(url);
+                g.setDateAjout(Instant.now());
+                newGalerie.add(g);
+            }
+            galerieRepository.saveAll(newGalerie);
+            s.setGalerie(newGalerie);
+            
+            if (!newGalerie.isEmpty()) {
+                details.setGalerie(newGalerie.get(0));
+            } else {
+                details.setGalerie(null);
+            }
         }
 
-        s.setDetails(details);
         detailsRepository.save(details);
 
         // Synchronisation Firebase
@@ -405,7 +450,35 @@ public class SignalementService {
             details.setEntreprise(entreprise);
         }
 
-        details.setPhotoUrl(dto.getPhotoUrl());
+        // Gérer la galerie
+        if (dto.getGalerie() != null && !dto.getGalerie().isEmpty()) {
+            List<GalerieSignalement> galerie = new java.util.ArrayList<>();
+            for (SignalementDTO.GalerieItemDTO item : dto.getGalerie()) {
+                String url = item.getUrl();
+                GalerieSignalement g = new GalerieSignalement();
+                g.setSignalement(s);
+                g.setPhotoUrl(url);
+                g.setDateAjout(Instant.now());
+                galerie.add(g);
+            }
+            galerieRepository.saveAll(galerie);
+            s.setGalerie(galerie);
+            if (!galerie.isEmpty()) {
+                details.setGalerie(galerie.get(0));
+            }
+        } else if (dto.getPhotoUrl() != null && !dto.getPhotoUrl().isEmpty()) {
+            // Fallback pour compatibilité ascendante
+            GalerieSignalement g = new GalerieSignalement();
+            g.setSignalement(s);
+            g.setPhotoUrl(dto.getPhotoUrl());
+            g.setDateAjout(Instant.now());
+            galerieRepository.save(g);
+            
+            List<GalerieSignalement> galerie = new java.util.ArrayList<>();
+            galerie.add(g);
+            s.setGalerie(galerie);
+            details.setGalerie(g);
+        }
 
         s.setDetails(details);
         detailsRepository.save(details);

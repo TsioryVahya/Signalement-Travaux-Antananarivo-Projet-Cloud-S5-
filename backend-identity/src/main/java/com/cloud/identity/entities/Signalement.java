@@ -47,6 +47,17 @@ public class Signalement {
     @OneToOne(mappedBy = "signalement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private SignalementsDetail details;
 
+    @OneToMany(mappedBy = "signalement", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private java.util.List<GalerieSignalement> galerie;
+
+    public java.util.List<GalerieSignalement> getGalerie() {
+        return galerie;
+    }
+
+    public void setGalerie(java.util.List<GalerieSignalement> galerie) {
+        this.galerie = galerie;
+    }
+
     public SignalementsDetail getDetails() {
         return details;
     }

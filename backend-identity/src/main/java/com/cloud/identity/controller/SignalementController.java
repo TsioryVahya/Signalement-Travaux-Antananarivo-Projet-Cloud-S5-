@@ -66,14 +66,14 @@ public class SignalementController {
             
             BigDecimal budget = data.get("budget") != null ? new BigDecimal(data.get("budget").toString()) : null;
             
-            String entrepriseConcerne = data.get("entrepriseConcerne") != null ? (String) data.get("entrepriseConcerne") : (String) data.get("entreprise_concerne");
+            String entrepriseNom = data.get("entrepriseNom") != null ? (String) data.get("entrepriseNom") : (String) data.get("entreprise_nom");
             
-            String photoUrl = data.get("photoUrl") != null ? (String) data.get("photoUrl") : (String) data.get("photo_url");
+            List<String> photos = (List<String>) (data.get("photos") != null ? data.get("photos") : data.get("galerie"));
 
             Integer typeId = data.get("typeId") != null ? Integer.valueOf(data.get("typeId").toString()) : 
-                             (data.get("type_id") != null ? Integer.valueOf(data.get("type_id").toString()) : null);
+                             (data.get("id_type_signalement") != null ? Integer.valueOf(data.get("id_type_signalement").toString()) : null);
 
-            signalementService.creerSignalement(latitude, longitude, description, email, surfaceM2, budget, entrepriseConcerne, photoUrl, typeId);
+            signalementService.creerSignalement(latitude, longitude, description, email, surfaceM2, budget, entrepriseNom, photos, typeId);
             return ResponseEntity.ok(Map.of("message", "Signalement créé avec succès"));
         } catch (Exception e) {
             e.printStackTrace();
@@ -96,14 +96,14 @@ public class SignalementController {
             
             BigDecimal budget = data.get("budget") != null ? new BigDecimal(data.get("budget").toString()) : null;
             
-            String entrepriseConcerne = data.get("entrepriseConcerne") != null ? (String) data.get("entrepriseConcerne") : (String) data.get("entreprise_concerne");
+            String entrepriseNom = data.get("entrepriseNom") != null ? (String) data.get("entrepriseNom") : (String) data.get("entreprise_nom");
             
-            String photoUrl = data.get("photoUrl") != null ? (String) data.get("photoUrl") : (String) data.get("photo_url");
-
+            List<String> photos = (List<String>) (data.get("photos") != null ? data.get("photos") : data.get("galerie"));
+            
             Integer typeId = data.get("typeId") != null ? Integer.valueOf(data.get("typeId").toString()) : 
-                             (data.get("type_id") != null ? Integer.valueOf(data.get("type_id").toString()) : null);
+                             (data.get("id_type_signalement") != null ? Integer.valueOf(data.get("id_type_signalement").toString()) : null);
 
-            signalementService.modifierSignalement(id, latitude, longitude, statutId, description, surfaceM2, budget, entrepriseConcerne, photoUrl, typeId);
+            signalementService.modifierSignalement(id, latitude, longitude, statutId, description, surfaceM2, budget, entrepriseNom, photos, typeId);
             return ResponseEntity.ok("Signalement modifié avec succès");
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());

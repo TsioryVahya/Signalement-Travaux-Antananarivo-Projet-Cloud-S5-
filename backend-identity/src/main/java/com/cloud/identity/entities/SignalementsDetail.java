@@ -33,8 +33,9 @@ public class SignalementsDetail {
     @JoinColumn(name = "entreprise_id")
     private Entreprise entreprise;
 
-    @Column(name = "photo_url", length = Integer.MAX_VALUE)
-    private String photoUrl;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "galerie_id")
+    private GalerieSignalement galerie;
 
     @Column(name = "entreprise_concerne")
     private String entrepriseConcerne;
@@ -87,12 +88,12 @@ public class SignalementsDetail {
         this.entreprise = entreprise;
     }
 
-    public String getPhotoUrl() {
-        return photoUrl;
+    public GalerieSignalement getGalerie() {
+        return galerie;
     }
 
-    public void setPhotoUrl(String photoUrl) {
-        this.photoUrl = photoUrl;
+    public void setGalerie(GalerieSignalement galerie) {
+        this.galerie = galerie;
     }
 
     public String getEntrepriseConcerne() {

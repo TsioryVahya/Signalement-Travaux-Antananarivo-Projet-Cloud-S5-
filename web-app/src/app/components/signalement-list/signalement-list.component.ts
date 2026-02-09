@@ -24,6 +24,8 @@ export class SignalementListComponent implements OnInit {
   showEditModal = false;
   showPhotoModal = false;
   selectedPhotoUrl = '';
+  selectedPhotos: string[] = [];
+  currentPhotoIndex = 0;
   editingSignalement: any = null;
   isSaving = false;
 
@@ -71,14 +73,49 @@ export class SignalementListComponent implements OnInit {
     }).length;
   }
 
-  openPhotoModal(url: string): void {
-    this.selectedPhotoUrl = url;
+  openPhotoModal(s: Signalement): void {
+    this.selectedPhotos = [];
+    if (s.galerie && s.galerie.length > 0) {
+      this.selectedPhotos = s.galerie.map(g => g.url);
+    } else if (s.photoUrl) {
+      this.selectedPhotos = [s.photoUrl];
+    }
+    
+    this.currentPhotoIndex = 0;
+    this.selectedPhotoUrl = this.selectedPhotos.length > 0 ? this.selectedPhotos[0] : '';
     this.showPhotoModal = true;
+    
+    // Empêcher le scroll du body quand la modal est ouverte
+    document.body.style.overflow = 'hidden';
   }
 
   closePhotoModal(): void {
     this.showPhotoModal = false;
     this.selectedPhotoUrl = '';
+    this.selectedPhotos = [];
+    this.currentPhotoIndex = 0;
+    document.body.style.overflow = 'auto';
+  }
+
+  selectPhoto(index: number): void {
+    this.currentPhotoIndex = index;
+    this.selectedPhotoUrl = this.selectedPhotos[index];
+  }
+
+  nextPhoto(event?: Event): void {
+    if (event) event.stopPropagation();
+    if (this.currentPhotoIndex < this.selectedPhotos.length - 1) {
+      this.currentPhotoIndex++;
+      this.selectedPhotoUrl = this.selectedPhotos[this.currentPhotoIndex];
+    }
+  }
+
+  prevPhoto(event?: Event): void {
+    if (event) event.stopPropagation();
+    if (this.currentPhotoIndex > 0) {
+      this.currentPhotoIndex--;
+      this.selectedPhotoUrl = this.selectedPhotos[this.currentPhotoIndex];
+    }
   }
 
   loadStatuses(): void {
