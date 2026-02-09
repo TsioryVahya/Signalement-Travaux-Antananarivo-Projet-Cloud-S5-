@@ -48,6 +48,9 @@ public class Utilisateur {
     @Column(name = "date_creation")
     private Instant dateCreation;
 
+    @Column(name = "firebase_uid")
+    private String firebaseUid;
+
     public UUID getId() {
         return id;
     }
@@ -136,4 +139,11 @@ public class Utilisateur {
         this.dateCreation = dateCreation;
     }
 
+    public String getFirebaseUid() {
+        return firebaseUid;
+    }
+
+    public void setFirebaseUid(String firebaseUid) {
+        this.firebaseUid = firebaseUid;
+    }
 }

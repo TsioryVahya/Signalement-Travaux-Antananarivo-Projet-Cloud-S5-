@@ -33,7 +33,8 @@ CREATE TABLE utilisateurs (
     date_deblocage_automatique TIMESTAMP,
     derniere_connexion TIMESTAMP,
     date_derniere_modification TIMESTAMP,
-    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    firebase_uid VARCHAR(255) UNIQUE
 );
 
 -- Table des Sessions

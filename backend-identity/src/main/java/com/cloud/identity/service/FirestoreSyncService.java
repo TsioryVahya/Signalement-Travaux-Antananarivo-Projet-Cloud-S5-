@@ -58,23 +58,14 @@ public class FirestoreSyncService {
 
             for (QueryDocumentSnapshot document : documents) {
                 String email = document.getString("email");
-                String postgresIdStr = document.getString("postgresId");
+                String firebaseUid = document.getId(); // L'ID du document est le Firebase UID
 
                 if (email == null || email.isEmpty())
                     continue;
 
-                Optional<Utilisateur> userOpt = Optional.empty();
+                Optional<Utilisateur> userOpt = utilisateurRepository.findByFirebaseUid(firebaseUid);
 
-                // Priorité à l'ID Postgres pour éviter les doublons si l'email a changé
-                if (postgresIdStr != null && !postgresIdStr.isEmpty()) {
-                    try {
-                        userOpt = utilisateurRepository.findById(java.util.UUID.fromString(postgresIdStr));
-                    } catch (Exception e) {
-                        System.err.println("ID Postgres invalide dans Firestore: " + postgresIdStr);
-                    }
-                }
-
-                // Si non trouvé par ID, on cherche par email
+                // Si non trouvé par Firebase UID, on cherche par email (pour la transition)
                 if (userOpt.isEmpty()) {
                     userOpt = utilisateurRepository.findByEmail(email);
                 }
@@ -84,6 +75,10 @@ public class FirestoreSyncService {
 
                 if (userOpt.isPresent()) {
                     user = userOpt.get();
+                    // Assigner le firebaseUid s'il n'était pas encore là
+                    if (user.getFirebaseUid() == null) {
+                        user.setFirebaseUid(firebaseUid);
+                    }
 
                     // --- LOGIQUE DE COMPARAISON DES DATES (Solution 2) ---
                     com.google.cloud.Timestamp firestoreTime = document.getTimestamp("date_derniere_modification");
@@ -100,15 +95,7 @@ public class FirestoreSyncService {
                     }
                 } else {
                     user = new Utilisateur();
-                    // Si on a un postgresIdStr mais qu'il n'existe pas en base, on peut soit
-                    // l'ignorer,
-                    // soit le créer avec cet ID. Ici on le crée avec cet ID si possible.
-                    if (postgresIdStr != null && !postgresIdStr.isEmpty()) {
-                        try {
-                            user.setId(java.util.UUID.fromString(postgresIdStr));
-                        } catch (Exception e) {
-                        }
-                    }
+                    user.setFirebaseUid(firebaseUid);
                     user.setEmail(email);
                     user.setDateCreation(java.time.Instant.now());
                     user.setRole(roleRepository.findByNom("UTILISATEUR").orElse(null));
@@ -193,6 +180,7 @@ public class FirestoreSyncService {
             CollectionReference usersCol = firestore.collection("utilisateurs");
             Map<String, Object> data = new HashMap<>();
             data.put("postgresId", user.getId().toString());
+            data.put("firebaseUid", user.getFirebaseUid());
             data.put("email", user.getEmail());
             data.put("motDePasse", user.getMotDePasse());
             data.put("tentatives_connexion", user.getTentativesConnexion() != null ? user.getTentativesConnexion() : 0);
@@ -216,11 +204,11 @@ public class FirestoreSyncService {
                     user.getDateDeblocageAutomatique() != null ? user.getDateDeblocageAutomatique().toString() : null);
 
             // LOG POUR DEBUG : On affiche ce qu'on envoie
-            System.out.println("📤 Sync vers Firestore [" + user.getEmail() + "] - MDP: " + user.getMotDePasse());
+            System.out.println("📤 Sync vers Firestore [" + user.getEmail() + "] - FirebaseUID: " + user.getFirebaseUid());
 
-            // Utiliser l'ID Postgres comme ID de document dans Firestore pour éviter les
-            // doublons si l'email change
-            usersCol.document(user.getId().toString()).set(data).get();
+            // Utiliser le Firebase UID comme ID de document si disponible, sinon l'ID Postgres
+            String documentId = user.getFirebaseUid() != null ? user.getFirebaseUid() : user.getId().toString();
+            usersCol.document(documentId).set(data).get();
         } catch (Exception e) {
             System.err.println("Erreur lors de la synchronisation de l'utilisateur " + user.getEmail()
                     + " vers Firestore : " + e.getMessage());

@@ -11,5 +11,6 @@ import java.util.UUID;
 @Repository
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, UUID> {
     Optional<Utilisateur> findByEmail(String email);
+    Optional<Utilisateur> findByFirebaseUid(String firebaseUid);
     List<Utilisateur> findByStatutActuelNom(String nom);
 }
