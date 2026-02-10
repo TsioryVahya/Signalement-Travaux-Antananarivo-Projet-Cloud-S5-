@@ -23,11 +23,17 @@ export class SignalementListComponent implements OnInit {
   // Modal States
   showEditModal = false;
   showPhotoModal = false;
+  showDetailsModal = false;
+  activeMenuId: string | null = null;
+  selectedSignalement: Signalement | null = null;
   selectedPhotoUrl = '';
   selectedPhotos: string[] = [];
   currentPhotoIndex = 0;
   editingSignalement: any = null;
   isSaving = false;
+
+  // Notification state
+  notification: { message: string, type: 'success' | 'error' } | null = null;
 
   // State for synchronization
   isSyncing = false;
@@ -143,6 +149,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
+      niveau: signalement.niveau || 1,
       entrepriseNom: signalement.entrepriseNom || '',
       dateModification: new Date().toISOString().slice(0, 16) // Format YYYY-MM-DDTHH:mm
     };
@@ -171,12 +178,21 @@ export class SignalementListComponent implements OnInit {
         this.isSaving = false;
         this.closeEditModal();
         this.loadSignalements();
+        this.showNotification('Signalement mis à jour avec succès', 'success');
       },
       error: (err) => {
         console.error(err);
         this.isSaving = false;
+        this.showNotification('Erreur lors de la mise à jour du signalement', 'error');
       }
     });
+  }
+
+  showNotification(message: string, type: 'success' | 'error'): void {
+    this.notification = { message, type };
+    setTimeout(() => {
+      this.notification = null;
+    }, 3000);
   }
 
   onStatusChange(signalement: Signalement, newStatusId: string): void {
@@ -190,6 +206,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description,
       budget: signalement.budget,
       surfaceM2: signalement.surfaceM2,
+      niveau: signalement.niveau || 1,
       entrepriseNom: signalement.entrepriseNom,
       // Par défaut, on prend "maintenant" pour le changement rapide
       dateModification: new Date().toISOString()
@@ -241,6 +258,16 @@ export class SignalementListComponent implements OnInit {
     return 'bg-green-50 text-green-600 border-green-100 focus:ring-green-500';
   }
 
+  getNiveauClass(niveau: number | undefined): string {
+    if (!niveau) return 'bg-slate-100 text-slate-500 border-slate-200';
+    
+    if (niveau <= 3) return 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-100/50';
+    if (niveau <= 5) return 'bg-blue-50 text-blue-600 border-blue-100 shadow-blue-100/50';
+    if (niveau <= 7) return 'bg-amber-50 text-amber-600 border-amber-100 shadow-amber-100/50';
+    if (niveau <= 9) return 'bg-orange-50 text-orange-600 border-orange-100 shadow-orange-100/50';
+    return 'bg-red-50 text-red-600 border-red-100 shadow-red-100/50 animate-pulse';
+  }
+
   deleteSignalement(id: string | undefined): void {
     if (!id) return;
     if (confirm('Êtes-vous sûr de vouloir supprimer ce signalement ?')) {
@@ -271,6 +298,37 @@ export class SignalementListComponent implements OnInit {
              emailStr.includes(term) ||
              statusStr.includes(term);
     });
+  }
+
+  // Action Menu & Details Methods
+  toggleMenu(event: Event, id: string | undefined): void {
+    event.stopPropagation();
+    if (!id) return;
+    this.activeMenuId = this.activeMenuId === id ? null : id;
+  }
+
+  openDetailsModal(signalement: Signalement): void {
+    this.selectedSignalement = signalement;
+    this.showDetailsModal = true;
+    this.activeMenuId = null;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeDetailsModal(): void {
+    this.showDetailsModal = false;
+    this.selectedSignalement = null;
+    document.body.style.overflow = 'auto';
+  }
+
+  editFromMenu(signalement: Signalement): void {
+    this.openEditModal(signalement);
+    this.activeMenuId = null;
+  }
+
+  deleteFromMenu(signalement: Signalement): void {
+    const id = signalement.postgresId || signalement.id;
+    this.deleteSignalement(id);
+    this.activeMenuId = null;
   }
 
   getProgressByStatus(statut: any): number {
