@@ -48,7 +48,7 @@ public class FirestoreSyncService {
     private TypeSignalementRepository typeSignalementRepository;
 
     @Autowired
-    private EntrepriseRepository entrepriseRepository;
+    private GalerieSignalementRepository galerieRepository;
 
     /**
      * Synchronise les utilisateurs de Firestore vers PostgreSQL.
@@ -288,6 +288,10 @@ public class FirestoreSyncService {
                 if (photoUrl == null)
                     photoUrl = document.getString("photo_url");
 
+                List<Map<String, Object>> galerieFirestore = (List<Map<String, Object>>) document.get("galerie");
+                if (galerieFirestore == null)
+                    galerieFirestore = (List<Map<String, Object>>) document.get("photos");
+
                 Double surfaceM2 = getAsDouble(document, "surfaceM2");
                 if (surfaceM2 == null)
                     surfaceM2 = getAsDouble(document, "surface_m2");
@@ -381,18 +385,43 @@ public class FirestoreSyncService {
                 details.setDescription(description);
                 details.setSurfaceM2(surfaceM2);
                 details.setBudget(budget);
-                
-                if (entrepriseConcerne != null && !entrepriseConcerne.isEmpty()) {
-                    final String finalEntrepriseNom = entrepriseConcerne;
-                    details.setEntreprise(entrepriseRepository.findByNom(finalEntrepriseNom)
-                        .orElseGet(() -> {
-                            Entreprise e = new Entreprise();
-                            e.setNom(finalEntrepriseNom);
-                            return entrepriseRepository.save(e);
-                        }));
+                details.setEntrepriseConcerne(entrepriseConcerne);
+
+                // Gérer la galerie
+                if (galerieFirestore != null && !galerieFirestore.isEmpty()) {
+                    List<com.cloud.identity.entities.GalerieSignalement> galerie = new java.util.ArrayList<>();
+                    for (Map<String, Object> photoMap : galerieFirestore) {
+                        String url = (String) photoMap.get("url");
+                        if (url != null) {
+                            com.cloud.identity.entities.GalerieSignalement g = new com.cloud.identity.entities.GalerieSignalement();
+                            g.setSignalement(s);
+                            g.setPhotoUrl(url);
+                            g.setDateAjout(java.time.Instant.now());
+                            galerie.add(g);
+                        }
+                    }
+                    if (!galerie.isEmpty()) {
+                        // S'assurer que le signalement est déjà sauvegardé pour avoir un ID
+                        s = signalementRepository.save(s);
+                        galerieRepository.saveAll(galerie);
+                        s.setGalerie(galerie);
+                        details.setGalerie(galerie.get(0));
+                    }
+                } else if (photoUrl != null && !photoUrl.isEmpty()) {
+                    // Fallback si seule photoUrl est présente
+                    com.cloud.identity.entities.GalerieSignalement g = new com.cloud.identity.entities.GalerieSignalement();
+                    g.setSignalement(s);
+                    g.setPhotoUrl(photoUrl);
+                    g.setDateAjout(java.time.Instant.now());
+                    
+                    s = signalementRepository.save(s);
+                    galerieRepository.save(g);
+                    
+                    List<com.cloud.identity.entities.GalerieSignalement> galerie = new java.util.ArrayList<>();
+                    galerie.add(g);
+                    s.setGalerie(galerie);
+                    details.setGalerie(g);
                 }
-                
-                details.setPhotoUrl(photoUrl);
 
                 s.setDetails(details);
                 detailsRepository.save(details);
@@ -468,8 +497,19 @@ public class FirestoreSyncService {
                 data.put("entrepriseConcerne", entrepriseNom);
                 data.put("entreprise_concerne", entrepriseNom);
 
-                data.put("photoUrl", details.getPhotoUrl());
-                data.put("photo_url", details.getPhotoUrl());
+                if (signalement.getGalerie() != null && !signalement.getGalerie().isEmpty()) {
+                    List<Map<String, String>> photosList = signalement.getGalerie().stream().map(g -> {
+                        Map<String, String> photoMap = new HashMap<>();
+                        photoMap.put("url", g.getPhotoUrl());
+                        return photoMap;
+                    }).collect(java.util.stream.Collectors.toList());
+                    data.put("photos", photosList);
+                    data.put("galerie", photosList);
+                    
+                    // On garde photo_url pour la compatibilité avec le premier élément
+                    data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
+                    data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
+                }
             }
 
             // Ajouter à Firestore et récupérer l'ID généré
@@ -506,9 +546,26 @@ public class FirestoreSyncService {
             updates.put("longitude", signalement.getLongitude());
 
             // On met à jour le document Firebase correspondant
+            Map<String, Object> data = new HashMap<>(updates);
+            
+            // On ajoute la galerie
+            if (signalement.getGalerie() != null && !signalement.getGalerie().isEmpty()) {
+                List<Map<String, String>> photosList = signalement.getGalerie().stream().map(g -> {
+                    Map<String, String> photoMap = new HashMap<>();
+                    photoMap.put("url", g.getPhotoUrl());
+                    return photoMap;
+                }).collect(java.util.stream.Collectors.toList());
+                data.put("photos", photosList);
+                data.put("galerie", photosList);
+                
+                // On garde photo_url pour la compatibilité
+                data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
+                data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
+            }
+
             firestore.collection("signalements")
                     .document(signalement.getIdFirebase())
-                    .update(updates);
+                    .set(data, SetOptions.merge());
 
             System.out.println("Synchronisation Firebase réussie pour le signalement : " + signalement.getId());
         } catch (Exception e) {

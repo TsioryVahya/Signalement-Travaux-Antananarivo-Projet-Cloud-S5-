@@ -14,6 +14,6 @@ import java.util.List;
 public interface SignalementRepository extends JpaRepository<Signalement, UUID> {
     Optional<Signalement> findByIdFirebase(String idFirebase);
 
-    @Query("SELECT DISTINCT s FROM Signalement s LEFT JOIN FETCH s.details LEFT JOIN FETCH s.statut LEFT JOIN FETCH s.utilisateur LEFT JOIN FETCH s.type")
+    @Query("SELECT DISTINCT s FROM Signalement s LEFT JOIN FETCH s.details LEFT JOIN FETCH s.statut LEFT JOIN FETCH s.utilisateur LEFT JOIN FETCH s.type LEFT JOIN FETCH s.galerie")
     List<Signalement> findAllWithDetails();
 }

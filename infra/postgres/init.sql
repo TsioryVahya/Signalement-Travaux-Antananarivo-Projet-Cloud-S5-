@@ -110,8 +110,19 @@ CREATE TABLE signalements_details (
     surface_m2 DOUBLE PRECISION,
     budget DECIMAL(15, 2),
     entreprise_id INT REFERENCES entreprises(id),
-    photo_url TEXT
+    galerie_id UUID -- Sera lié à la galerie si besoin d'une photo principale ou groupe
 );
+
+-- Table de la Galerie des Signalements (Multiples images)
+CREATE TABLE galerie_signalement (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id_signalement UUID REFERENCES signalements(id) ON DELETE CASCADE,
+    photo_url TEXT NOT NULL,
+    date_ajout TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Ajout d'une clé étrangère optionnelle de signalements_details vers galerie_signalement si on veut pointer vers une image spécifique
+ALTER TABLE signalements_details ADD CONSTRAINT fk_signalements_details_galerie FOREIGN KEY (galerie_id) REFERENCES galerie_signalement(id);
 
 
 -- Table Historique des Statuts de Signalement

@@ -98,93 +98,101 @@
       </div>
 
       <!-- Modal de Signalement Rapide -->
-      <div v-if="newSignalementPoint" class="absolute inset-0 z-50 flex items-center justify-center p-6 bg-black/40 backdrop-blur-sm">
-        <div class="w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-          <div class="bg-blue-600 p-6 text-white text-center">
-            <div class="text-4xl mb-2 flex justify-center">
+      <div v-if="newSignalementPoint" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+        <div class="w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in duration-200">
+          <div class="bg-blue-600 p-5 text-white text-center flex-shrink-0">
+            <div class="text-3xl mb-1 flex justify-center">
               <ion-icon :icon="constructOutline" />
             </div>
-            <h3 class="text-xl font-bold">Signaler un problème</h3>
-            <p class="text-blue-100 text-xs">Aidez-nous à améliorer les routes</p>
+            <h3 class="text-lg font-bold">Signaler un problème</h3>
+            <p class="text-blue-100 text-[10px]">Aidez-nous à améliorer les routes</p>
           </div>
-          <div class="p-6 space-y-4">
+          
+          <div class="p-5 space-y-4 overflow-y-auto flex-1">
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Description</label>
-              <textarea v-model="reportDescription" rows="3" placeholder="Décrivez le problème..." class="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-slate-700 resize-none"></textarea>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Description</label>
+              <textarea v-model="reportDescription" rows="2" placeholder="Décrivez le problème..." class="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm text-slate-700 resize-none"></textarea>
             </div>
 
             <!-- Sélection du type de signalement -->
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 ml-1">Type de problème</label>
+              <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 ml-1">Type de problème</label>
               <div class="relative group">
-                <!-- Boutons de navigation -->
-                <button 
-                  @click="scrollCarousel('left')"
-                  class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm p-1 rounded-full shadow-md text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ion-icon :icon="chevronBackOutline" />
-                </button>
-                
                 <div 
                   ref="carouselRef"
-                  class="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth pb-2 px-1"
+                  class="flex gap-2 overflow-x-auto no-scrollbar scroll-smooth pb-1 px-1"
                 >
                   <div 
                     v-for="type in typesSignalement" 
                     :key="type.id"
                     @click="selectedTypeId = type.id"
                     :class="[
-                      'flex-shrink-0 w-28 h-28 rounded-2xl p-3 flex flex-col items-center justify-between cursor-pointer transition-all border-2',
-                      selectedTypeId === type.id ? 'border-blue-500 scale-95 shadow-inner' : 'border-transparent bg-slate-50'
+                      'flex-shrink-0 w-24 h-24 rounded-2xl p-2 flex flex-col items-center justify-between cursor-pointer transition-all border-2',
+                      selectedTypeId === type.id ? 'border-blue-500 scale-95 bg-blue-50/50' : 'border-transparent bg-slate-50'
                     ]"
                   >
                     <div 
-                      class="w-12 h-12 rounded-xl flex items-center justify-center shadow-sm"
+                      class="w-10 h-10 rounded-xl flex items-center justify-center shadow-sm"
                       :style="{ backgroundColor: type.couleur + '20' }"
                     >
-                      <svg viewBox="0 0 24 24" class="w-7 h-7" :style="{ fill: type.couleur }">
+                      <svg viewBox="0 0 24 24" class="w-6 h-6" :style="{ fill: type.couleur }">
                         <path :d="type.icone_path" />
                       </svg>
                     </div>
-                    <span class="text-[10px] font-bold text-center leading-tight text-slate-700 uppercase tracking-tighter line-clamp-2">
+                    <span class="text-[9px] font-bold text-center leading-tight text-slate-700 uppercase tracking-tighter line-clamp-2">
                       {{ type.nom }}
                     </span>
                   </div>
                 </div>
-
-                <button 
-                  @click="scrollCarousel('right')"
-                  class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/80 backdrop-blur-sm p-1 rounded-full shadow-md text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <ion-icon :icon="chevronForwardOutline" />
-                </button>
               </div>
             </div>
 
             <div>
-              <label class="block text-xs font-bold text-slate-400 uppercase mb-2 ml-1">Photo</label>
-              <div v-if="!reportPhotoUrl" @click="takePhoto" class="w-full h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 gap-2 cursor-pointer hover:bg-slate-100 hover:border-blue-200 transition-colors">
-                <ion-icon :icon="cameraOutline" class="text-3xl" />
-                <span class="text-xs font-bold">Prendre une photo</span>
+              <div class="flex justify-between items-center mb-2 ml-1">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase">Photos ({{ reportPhotos.length }})</label>
+                <button v-if="reportPhotos.length > 0" @click="reportPhotos = []" class="text-[10px] font-bold text-red-500 uppercase hover:underline">Tout effacer</button>
               </div>
-              <div v-else class="relative w-full h-48 rounded-xl overflow-hidden group">
-                <img :src="reportPhotoUrl" class="w-full h-full object-cover">
-                <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                   <button @click="removePhoto" class="bg-red-500 text-white p-3 rounded-full shadow-lg transform hover:scale-110 transition-transform">
-                     <ion-icon :icon="trashOutline" class="text-xl" />
-                   </button>
+              
+              <div class="grid grid-cols-3 gap-2">
+                <!-- Miniatures existantes -->
+                <div v-for="(photo, index) in reportPhotos" :key="index" class="relative aspect-square rounded-xl overflow-hidden group border border-slate-100 shadow-sm">
+                  <img :src="photo" class="w-full h-full object-cover">
+                  <button @click="removePhoto(index)" class="absolute top-1 right-1 z-10 bg-red-500/80 backdrop-blur-sm text-white w-6 h-6 rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
+                    <ion-icon :icon="closeOutline" class="text-sm" />
+                  </button>
                 </div>
+                
+                <!-- Boutons d'ajout -->
+                <div @click="takePhoto" class="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-100 hover:border-blue-200 transition-colors">
+                  <ion-icon :icon="cameraOutline" class="text-xl" />
+                  <span class="text-[8px] font-bold mt-1 uppercase">Caméra</span>
+                </div>
+
+                <div @click="triggerFileSelect" class="aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-slate-100 hover:border-blue-200 transition-colors">
+                  <ion-icon :icon="eyeOutline" class="text-xl" />
+                  <span class="text-[8px] font-bold mt-1 uppercase">Galerie</span>
+                </div>
+
+                <input 
+                  type="file" 
+                  ref="fileInputRef" 
+                  multiple 
+                  accept="image/*" 
+                  class="hidden" 
+                  @change="handleFileSelect"
+                >
               </div>
             </div>
-            <div class="flex gap-3">
-              <button @click="newSignalementPoint = null" class="flex-1 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl active:scale-95 transition-all">Annuler</button>
-              <button @click="submitReport" :disabled="isSubmitting" class="flex-1 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center justify-center">
-                <span v-if="isSubmitting" class="animate-spin mr-2">
-                  <ion-icon :icon="sendOutline" />
-                </span>
-                {{ isSubmitting ? 'Envoi...' : 'Envoyer' }}
-              </button>
-            </div>
+          </div>
+
+          <div class="p-5 bg-slate-50/50 border-t border-slate-100 flex gap-3 flex-shrink-0">
+            <button @click="newSignalementPoint = null" class="flex-1 py-3.5 bg-white text-slate-600 font-bold rounded-2xl border border-slate-200 active:scale-95 transition-all text-sm">Annuler</button>
+            <button @click="submitReport" :disabled="isSubmitting" class="flex-1 py-3.5 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/30 active:scale-95 transition-all flex items-center justify-center text-sm">
+              <span v-if="isSubmitting" class="animate-spin mr-2">
+                <ion-icon :icon="sendOutline" />
+              </span>
+              {{ isSubmitting ? 'Envoi...' : 'Envoyer' }}
+            </button>
           </div>
         </div>
       </div>
@@ -251,7 +259,8 @@ const isAuthLoading = ref(false);
 // Signalement State
 const newSignalementPoint = ref<{lat: number, lng: number} | null>(null);
 const reportDescription = ref('');
-const reportPhotoUrl = ref('');
+const reportPhotos = ref<string[]>([]);
+const fileInputRef = ref<HTMLInputElement | null>(null);
 const selectedTypeId = ref<number | null>(null);
 const typesSignalement = ref<TypeSignalement[]>([]);
 const isSubmitting = ref(false);
@@ -271,28 +280,85 @@ const filteredSignalements = computed(() => {
   return store.signalements;
 });
 
-// Auth Methods
+// Photo Methods
+const triggerFileSelect = () => {
+  fileInputRef.value?.click();
+};
+
+const handleFileSelect = (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  if (!input.files) return;
+
+  const files = Array.from(input.files);
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      if (e.target?.result) {
+        const resized = await resizeImage(e.target.result as string);
+        reportPhotos.value.push(resized);
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  
+  // Reset input value to allow selecting same files again
+  input.value = '';
+};
+
 const takePhoto = async () => {
   console.log('Tentative de prise de photo...');
   try {
     const photo = await Camera.getPhoto({
-      quality: 70,
+      quality: 60,
       allowEditing: false,
       resultType: CameraResultType.Base64,
-      source: CameraSource.Prompt
+      source: CameraSource.Camera
     });
     
-    console.log('Photo reçue:', photo.format);
     if (photo.base64String) {
-      reportPhotoUrl.value = `data:image/jpeg;base64,${photo.base64String}`;
+      const mimeType = photo.format === 'png' ? 'image/png' : 'image/jpeg';
+      const base64 = `data:${mimeType};base64,${photo.base64String}`;
+      const resized = await resizeImage(base64);
+      reportPhotos.value.push(resized);
     }
   } catch (e) {
     console.error('Erreur Camera:', e);
   }
 };
 
-const removePhoto = () => {
-  reportPhotoUrl.value = '';
+const removePhoto = (index: number) => {
+  reportPhotos.value.splice(index, 1);
+};
+
+// Fonction utilitaire pour redimensionner une image base64
+const resizeImage = (base64: string, maxWidth = 800, maxHeight = 800, quality = 0.6): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.src = base64;
+    img.onload = () => {
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > maxWidth) {
+          height *= maxWidth / width;
+          width = maxWidth;
+        }
+      } else {
+        if (height > maxHeight) {
+          width *= maxHeight / height;
+          height = maxHeight;
+        }
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, width, height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+  });
 };
 
 const handleLogin = async () => {
@@ -475,28 +541,44 @@ const submitReport = async () => {
   
   isSubmitting.value = true;
   try {
+    // Créer une copie simple des données pour éviter les proxys Vue
+    // Firestore n'aime pas les objets réactifs complexes
+    const galerieData = reportPhotos.value.map(url => ({ 
+      url: String(url) 
+    }));
+
     const reportData = {
-      latitude: newSignalementPoint.value.lat,
-      longitude: newSignalementPoint.value.lng,
-      description: reportDescription.value,
-      photo_url: reportPhotoUrl.value,
-      firebase_uid_utilisateur: store.user.firebaseUid || null, // Assurer que ce n'est pas undefined
-      email_utilisateur: store.user.email, // Ajouter l'email en secours
-      id_type_signalement: selectedTypeId.value,
+      latitude: Number(newSignalementPoint.value.lat),
+      longitude: Number(newSignalementPoint.value.lng),
+      description: String(reportDescription.value || ""),
+      galerie: galerieData,
+      firebase_uid_utilisateur: store.user.firebaseUid || null,
+      email_utilisateur: String(store.user.email),
+      id_type_signalement: Number(selectedTypeId.value),
       statut: 'nouveau',
-      entreprise: null,
       dateSignalement: new Date().toISOString(),
       createdAt: serverTimestamp()
     };
 
-    const docRef = await addDoc(collection(db, 'signalements'), reportData);
+    console.log('Envoi du signalement avec', galerieData.length, 'photos');
 
+    const docRef = await addDoc(collection(db, 'signalements'), reportData);
+    console.log('Signalement ajouté avec ID:', docRef.id);
+
+    // Reset form
     newSignalementPoint.value = null;
     reportDescription.value = '';
-    reportPhotoUrl.value = '';
+    reportPhotos.value = [];
     selectedTypeId.value = null;
-  } catch (err) {
-    console.error(err);
+    
+    alert('Signalement envoyé avec succès !');
+  } catch (err: any) {
+    console.error('Erreur lors de l\'envoi:', err);
+    if (err.message?.includes('too large')) {
+      alert('Erreur : Le signalement est trop lourd. Essayez de mettre moins de photos ou des photos plus petites.');
+    } else {
+      alert('Erreur lors de l\'envoi du signalement : ' + err.message);
+    }
   } finally {
     isSubmitting.value = false;
   }
@@ -599,12 +681,20 @@ const updateMarkers = () => {
 
   filteredSignalements.value.forEach(s => {
     if (s.latitude && s.longitude) {
+      // Déterminer l'image à afficher (priorité à la galerie, puis photo_url)
+      let displayPhoto = '';
+      if (s.galerie && s.galerie.length > 0) {
+        displayPhoto = s.galerie[0].url;
+      } else if (s.photo_url) {
+        displayPhoto = s.photo_url;
+      }
+
       const m = L.marker([s.latitude, s.longitude])
         .addTo(map!)
         .bindPopup(`
           <div class="p-2 min-w-[160px]">
             <div class="text-[10px] font-bold uppercase mb-1" style="color: ${getStatusTextColor(s.statut)}">${s.statut}</div>
-            ${s.photo_url ? `<div class="w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100"><img src="${s.photo_url}" class="w-full h-full object-cover"></div>` : ''}
+            ${displayPhoto ? `<div class="w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100"><img src="${displayPhoto}" class="w-full h-full object-cover"></div>` : ''}
             <div class="font-bold text-slate-800 text-sm mb-1">${s.description || 'Signalement'}</div>
             ${s.entreprise ? `<div class="text-[9px] text-blue-600 font-bold italic mb-1">Entreprise: ${s.entreprise}</div>` : ''}
             <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-50 flex justify-between">

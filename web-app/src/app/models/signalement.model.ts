@@ -28,6 +28,7 @@ export interface Signalement {
   entrepriseConcerne?: string;
   entrepriseNom?: string;
   photoUrl?: string;
+  galerie?: Array<{url: string}>;
   utilisateur?: {
     email: string;
   };

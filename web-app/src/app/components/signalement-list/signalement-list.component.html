@@ -266,12 +266,15 @@
             </td>
             <td class="px-8 py-6 text-right">
               <div class="flex justify-end gap-1.5">
-                <button *ngIf="s.photoUrl" 
-                        (click)="openPhotoModal(s.photoUrl)"
+                <button *ngIf="s.photoUrl || (s.galerie && s.galerie.length > 0)" 
+                        (click)="openPhotoModal(s)"
                         class="w-9 h-9 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm hover:shadow-blue-200 border border-blue-100" title="Voir Photo">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
+                  <span *ngIf="s.galerie && s.galerie.length > 1" class="absolute -top-1 -right-1 bg-blue-600 text-white text-[8px] font-bold px-1 rounded-full">
+                    {{ s.galerie.length }}
+                  </span>
                 </button>
                 <button (click)="openEditModal(s)" 
                         class="w-9 h-9 flex items-center justify-center text-slate-400 hover:bg-slate-900 hover:text-white rounded-xl transition-all shadow-sm border border-slate-100" title="Modifier">
@@ -293,22 +296,64 @@
     </div>
   </div>
 
-  <!-- Photo Modal -->
+  <!-- Photo Modal (Galerie avec scroll vertical et overlay plein écran) -->
   <div *ngIf="showPhotoModal" 
-       class="fixed inset-0 z-[5000] flex items-center justify-center bg-slate-900/80 backdrop-blur-md p-4 animate-in fade-in duration-300"
+       class="fixed inset-0 z-[5000] flex items-center justify-center bg-slate-950/95 backdrop-blur-xl p-0 md:p-4 animate-in fade-in duration-300"
        (click)="closePhotoModal()">
-    <div class="bg-white rounded-[2rem] max-w-4xl w-full overflow-hidden shadow-2xl animate-in zoom-in duration-300" 
+    
+    <!-- Bouton Fermer (Top Right) -->
+    <button (click)="closePhotoModal()" class="absolute top-6 right-6 z-[5002] p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all active:scale-90 backdrop-blur-md border border-white/10">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    </button>
+
+    <div class="flex flex-col md:flex-row w-full h-full max-w-[95vw] max-h-[95vh] bg-transparent overflow-hidden" 
          (click)="$event.stopPropagation()">
-      <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-        <h3 class="font-black text-slate-800 text-xl tracking-tight">Détails de la Photo</h3>
-        <button (click)="closePhotoModal()" class="p-3 hover:bg-white rounded-2xl text-slate-400 hover:text-slate-600 shadow-sm transition-all active:scale-90">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      
+      <!-- Zone Image Principale (Overlay plein écran) -->
+      <div class="relative flex-1 flex items-center justify-center bg-black/40 rounded-[2.5rem] md:mr-6 overflow-hidden group">
+        <!-- Navigation Flèches -->
+        <button *ngIf="currentPhotoIndex > 0" 
+                (click)="prevPhoto($event)" 
+                class="absolute left-6 z-[5001] p-4 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
+
+        <button *ngIf="currentPhotoIndex < selectedPhotos.length - 1" 
+                (click)="nextPhoto($event)" 
+                class="absolute right-6 z-[5001] p-4 bg-black/20 hover:bg-black/40 text-white rounded-full backdrop-blur-md border border-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <!-- Image principale -->
+        <img [src]="selectedPhotoUrl" alt="Signalement" 
+             class="max-w-full max-h-full object-contain animate-in fade-in zoom-in-95 duration-500 shadow-2xl">
+        
+        <!-- Indicateur de position -->
+        <div class="absolute bottom-6 left-1/2 -translate-x-1/2 px-6 py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-sm font-black tracking-widest border border-white/10">
+          {{ currentPhotoIndex + 1 }} / {{ selectedPhotos.length }}
+        </div>
       </div>
-      <div class="p-8 flex items-center justify-center bg-slate-100/30">
-        <img [src]="selectedPhotoUrl" alt="Signalement" class="max-w-full max-h-[70vh] rounded-2xl shadow-2xl object-contain">
+      
+      <!-- Galerie Photo avec Scroll Vertical -->
+      <div class="w-full md:w-48 flex flex-col h-full bg-white/5 backdrop-blur-md rounded-[2.5rem] border border-white/10 p-6">
+        <h3 class="text-white text-[10px] font-black uppercase tracking-[0.2em] mb-6 text-center opacity-60">Toutes les photos</h3>
+        
+        <div class="flex-1 overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+          <div *ngFor="let photo of selectedPhotos; let i = index" 
+               (click)="selectPhoto(i)"
+               class="relative aspect-square rounded-2xl overflow-hidden cursor-pointer border-4 transition-all hover:scale-105 active:scale-95 group/thumb"
+               [class.border-blue-500]="currentPhotoIndex === i"
+               [class.border-transparent]="currentPhotoIndex !== i">
+            <img [src]="photo" class="w-full h-full object-cover transition-transform duration-500 group-hover/thumb:scale-110">
+            <div *ngIf="currentPhotoIndex === i" class="absolute inset-0 bg-blue-500/10 backdrop-blur-[2px]"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
