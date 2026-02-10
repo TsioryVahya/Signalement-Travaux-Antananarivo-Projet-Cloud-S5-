@@ -256,7 +256,7 @@
             </td>
             <td class="px-8 py-6 text-right">
               <div class="flex justify-end gap-1.5">
-                <button *ngIf="s.photoUrl || (s.galerie && s.galerie.length > 0)" 
+                <button *ngIf="s.galerie && s.galerie.length > 0" 
                         (click)="openPhotoModal(s)"
                         class="w-9 h-9 flex items-center justify-center text-blue-500 hover:bg-blue-500 hover:text-white rounded-xl transition-all shadow-sm hover:shadow-blue-200 border border-blue-100" title="Voir Photo">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

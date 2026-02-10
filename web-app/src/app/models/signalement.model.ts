@@ -26,9 +26,7 @@ export interface Signalement {
   description?: string;
   surfaceM2?: number;
   budget?: any;
-  entrepriseConcerne?: string;
   entrepriseNom?: string;
-  photoUrl?: string;
   galerie?: Array<{url: string}>;
   utilisateur?: {
     email: string;

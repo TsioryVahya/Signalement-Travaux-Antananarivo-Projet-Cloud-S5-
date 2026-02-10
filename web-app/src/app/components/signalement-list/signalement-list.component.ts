@@ -77,8 +77,6 @@ export class SignalementListComponent implements OnInit {
     this.selectedPhotos = [];
     if (s.galerie && s.galerie.length > 0) {
       this.selectedPhotos = s.galerie.map(g => g.url);
-    } else if (s.photoUrl) {
-      this.selectedPhotos = [s.photoUrl];
     }
     
     this.currentPhotoIndex = 0;
@@ -145,7 +143,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
-      entrepriseNom: signalement.entrepriseNom || signalement.entrepriseConcerne || '',
+      entrepriseNom: signalement.entrepriseNom || '',
       dateModification: signalement.dateDerniereModification 
         ? new Date(signalement.dateDerniereModification).toISOString().slice(0, 16)
         : new Date().toISOString().slice(0, 16)

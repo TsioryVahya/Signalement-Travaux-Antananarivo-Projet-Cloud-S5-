@@ -150,16 +150,6 @@ public class SignalementDTO {
         this.budget = budget;
     }
 
-    @com.google.cloud.firestore.annotation.PropertyName("photo_url")
-    public String getPhotoUrl() {
-        return photoUrl;
-    }
-
-    @com.google.cloud.firestore.annotation.PropertyName("photo_url")
-    public void setPhotoUrl(String photoUrl) {
-        this.photoUrl = photoUrl;
-    }
-
     public java.util.List<GalerieItemDTO> getGalerie() {
         return galerie;
     }

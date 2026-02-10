@@ -289,22 +289,14 @@ public class FirestoreSyncService {
                     }
                 }
 
-                // Support both camelCase and snake_case from Firestore
-                String photoUrl = document.getString("photoUrl");
-                if (photoUrl == null)
-                    photoUrl = document.getString("photo_url");
-
                 List<Map<String, Object>> galerieFirestore = (List<Map<String, Object>>) document.get("galerie");
-                if (galerieFirestore == null)
-                    galerieFirestore = (List<Map<String, Object>>) document.get("photos");
 
                 Double surfaceM2 = getAsDouble(document, "surfaceM2");
-                if (surfaceM2 == null)
-                    surfaceM2 = getAsDouble(document, "surface_m2");
 
-                String entrepriseConcerne = document.getString("entrepriseConcerne");
-                if (entrepriseConcerne == null)
-                    entrepriseConcerne = document.getString("entreprise_concerne");
+                String entrepriseConcerneVal = document.getString("entreprise");
+                if (entrepriseConcerneVal == null)
+                    entrepriseConcerneVal = document.getString("entrepriseConcerne");
+                final String finalEntrepriseNom = entrepriseConcerneVal;
 
                 Object budgetObj = document.get("budget");
                 BigDecimal budget = null;
@@ -391,13 +383,12 @@ public class FirestoreSyncService {
                 details.setDescription(description);
                 details.setSurfaceM2(surfaceM2);
                 details.setBudget(budget);
-                
-                if (entrepriseConcerne != null && !entrepriseConcerne.isEmpty()) {
-                    final String nomEntreprise = entrepriseConcerne;
-                    Entreprise entreprise = entrepriseRepository.findByNom(nomEntreprise)
+
+                if (finalEntrepriseNom != null && !finalEntrepriseNom.isEmpty()) {
+                    com.cloud.identity.entities.Entreprise entreprise = entrepriseRepository.findByNom(finalEntrepriseNom)
                             .orElseGet(() -> {
-                                Entreprise e = new Entreprise();
-                                e.setNom(nomEntreprise);
+                                com.cloud.identity.entities.Entreprise e = new com.cloud.identity.entities.Entreprise();
+                                e.setNom(finalEntrepriseNom);
                                 return entrepriseRepository.save(e);
                             });
                     details.setEntreprise(entreprise);
@@ -423,20 +414,6 @@ public class FirestoreSyncService {
                         s.setGalerie(galerie);
                         details.setGalerie(galerie.get(0));
                     }
-                } else if (photoUrl != null && !photoUrl.isEmpty()) {
-                    // Fallback si seule photoUrl est présente
-                    com.cloud.identity.entities.GalerieSignalement g = new com.cloud.identity.entities.GalerieSignalement();
-                    g.setSignalement(s);
-                    g.setPhotoUrl(photoUrl);
-                    g.setDateAjout(java.time.Instant.now());
-                    
-                    s = signalementRepository.save(s);
-                    galerieRepository.save(g);
-                    
-                    List<com.cloud.identity.entities.GalerieSignalement> galerie = new java.util.ArrayList<>();
-                    galerie.add(g);
-                    s.setGalerie(galerie);
-                    details.setGalerie(g);
                 }
 
                 s.setDetails(details);
@@ -500,32 +477,23 @@ public class FirestoreSyncService {
             }
 
             if (details != null) {
-                data.put("description", details.getDescription());
+                    data.put("description", details.getDescription());
+                    data.put("surfaceM2", details.getSurfaceM2());
+                    data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
 
-                // Write both camelCase and snake_case for compatibility
-                data.put("surfaceM2", details.getSurfaceM2());
-                data.put("surface_m2", details.getSurfaceM2());
+                    if (details.getEntreprise() != null) {
+                        data.put("entreprise", details.getEntreprise().getNom());
+                    }
 
-                data.put("budget", details.getBudget() != null ? details.getBudget().toString() : null);
-
-                String entrepriseNom = details.getEntreprise() != null ? details.getEntreprise().getNom() : null;
-                data.put("entrepriseConcerne", entrepriseNom);
-                data.put("entreprise_concerne", entrepriseNom);
-
-                if (signalement.getGalerie() != null && !signalement.getGalerie().isEmpty()) {
-                    List<Map<String, String>> photosList = signalement.getGalerie().stream().map(g -> {
-                        Map<String, String> photoMap = new HashMap<>();
-                        photoMap.put("url", g.getPhotoUrl());
-                        return photoMap;
-                    }).collect(java.util.stream.Collectors.toList());
-                    data.put("photos", photosList);
-                    data.put("galerie", photosList);
-                    
-                    // On garde photo_url pour la compatibilité avec le premier élément
-                    data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
-                    data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
+                    if (signalement.getGalerie() != null && !signalement.getGalerie().isEmpty()) {
+                        List<Map<String, String>> photosList = signalement.getGalerie().stream().map(g -> {
+                            Map<String, String> photoMap = new HashMap<>();
+                            photoMap.put("url", g.getPhotoUrl());
+                            return photoMap;
+                        }).collect(java.util.stream.Collectors.toList());
+                        data.put("galerie", photosList);
+                    }
                 }
-            }
 
             // Ajouter à Firestore et récupérer l'ID généré
             DocumentReference docRef = firestore.collection("signalements").document();
@@ -562,6 +530,18 @@ public class FirestoreSyncService {
             // On met à jour le document Firebase correspondant
             Map<String, Object> data = new HashMap<>(updates);
             
+            // On ajoute les détails s'ils existent
+            if (signalement.getDetails() != null) {
+                SignalementsDetail d = signalement.getDetails();
+                data.put("description", d.getDescription());
+                data.put("surfaceM2", d.getSurfaceM2());
+                data.put("budget", d.getBudget() != null ? d.getBudget().toString() : null);
+                
+                if (d.getEntreprise() != null) {
+                    data.put("entreprise", d.getEntreprise().getNom());
+                }
+            }
+
             // On ajoute la galerie
             if (signalement.getGalerie() != null && !signalement.getGalerie().isEmpty()) {
                 List<Map<String, String>> photosList = signalement.getGalerie().stream().map(g -> {
@@ -569,12 +549,7 @@ public class FirestoreSyncService {
                     photoMap.put("url", g.getPhotoUrl());
                     return photoMap;
                 }).collect(java.util.stream.Collectors.toList());
-                data.put("photos", photosList);
                 data.put("galerie", photosList);
-                
-                // On garde photo_url pour la compatibilité
-                data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
-                data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
             }
 
             firestore.collection("signalements")
