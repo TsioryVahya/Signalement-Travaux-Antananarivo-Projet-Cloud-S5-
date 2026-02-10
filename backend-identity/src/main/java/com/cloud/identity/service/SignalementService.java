@@ -133,7 +133,6 @@ public class SignalementService {
                     dto.setGalerie(s.getGalerie().stream()
                         .map(g -> new SignalementDTO.GalerieItemDTO(g.getPhotoUrl()))
                         .collect(Collectors.toList()));
-                    dto.setPhotoUrl(s.getGalerie().get(0).getPhotoUrl());
                 }
             } else {
                 System.out.println("⚠️ Aucun détail trouvé pour le signalement : " + s.getId());
@@ -466,18 +465,6 @@ public class SignalementService {
             if (!galerie.isEmpty()) {
                 details.setGalerie(galerie.get(0));
             }
-        } else if (dto.getPhotoUrl() != null && !dto.getPhotoUrl().isEmpty()) {
-            // Fallback pour compatibilité ascendante
-            GalerieSignalement g = new GalerieSignalement();
-            g.setSignalement(s);
-            g.setPhotoUrl(dto.getPhotoUrl());
-            g.setDateAjout(Instant.now());
-            galerieRepository.save(g);
-            
-            List<GalerieSignalement> galerie = new java.util.ArrayList<>();
-            galerie.add(g);
-            s.setGalerie(galerie);
-            details.setGalerie(g);
         }
 
         s.setDetails(details);

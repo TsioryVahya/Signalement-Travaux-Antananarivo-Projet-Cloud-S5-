@@ -168,19 +168,19 @@
 
       <!-- Image Context -->
       <div class="relative rounded-3xl overflow-hidden aspect-video bg-slate-100 shadow-inner group">
-        <!-- Placeholder image if no photoUrl is provided -->
-        <img *ngIf="!selectedSignalement?.photoUrl" 
+        <!-- Placeholder image if no galerie is provided -->
+        <img *ngIf="!getFirstPhotoUrl(selectedSignalement)" 
              src="https://images.unsplash.com/photo-1545143873-4e944c7feef5?auto=format&fit=crop&q=80&w=800" 
              class="w-full h-full object-cover opacity-60 grayscale-[0.5] group-hover:grayscale-0 group-hover:scale-110 transition-all duration-700">
         
-        <div *ngIf="!selectedSignalement?.photoUrl" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-[2px] text-white gap-2 pointer-events-none">
+        <div *ngIf="!getFirstPhotoUrl(selectedSignalement)" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-900/40 backdrop-blur-[2px] text-white gap-2 pointer-events-none">
           <svg class="w-12 h-12 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           <span class="text-[10px] font-black uppercase tracking-widest bg-black/40 px-3 py-1 rounded-full backdrop-blur-md">Illustration par défaut</span>
         </div>
 
-        <img *ngIf="selectedSignalement?.photoUrl" [src]="selectedSignalement?.photoUrl" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
+        <img *ngIf="getFirstPhotoUrl(selectedSignalement)" [src]="getFirstPhotoUrl(selectedSignalement)" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700">
         
         <!-- Overlay Badges -->
         <div class="absolute bottom-4 left-4 flex gap-2">

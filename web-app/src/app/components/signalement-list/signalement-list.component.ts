@@ -77,8 +77,6 @@ export class SignalementListComponent implements OnInit {
     this.selectedPhotos = [];
     if (s.galerie && s.galerie.length > 0) {
       this.selectedPhotos = s.galerie.map(g => g.url);
-    } else if (s.photoUrl) {
-      this.selectedPhotos = [s.photoUrl];
     }
     
     this.currentPhotoIndex = 0;

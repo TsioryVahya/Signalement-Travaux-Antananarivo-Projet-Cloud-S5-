@@ -97,6 +97,17 @@
         </button>
       </div>
 
+      <!-- Toast de Notification -->
+      <ion-toast
+        :is-open="showSuccessToast"
+        :message="toastMessage"
+        :duration="3000"
+        :color="toastColor"
+        position="bottom"
+        @didDismiss="showSuccessToast = false"
+        class="custom-toast"
+      ></ion-toast>
+
       <!-- Modal de Signalement Rapide -->
       <div v-if="newSignalementPoint" class="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
         <div class="w-full max-w-sm bg-white rounded-3xl shadow-2xl flex flex-col max-h-[90vh] animate-in zoom-in duration-200">
@@ -202,7 +213,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
-import { IonPage, IonContent, IonIcon } from '@ionic/vue';
+import { IonPage, IonContent, IonIcon, IonToast } from '@ionic/vue';
 
 interface TypeSignalement {
   id: number;
@@ -265,6 +276,10 @@ const selectedTypeId = ref<number | null>(null);
 const typesSignalement = ref<TypeSignalement[]>([]);
 const isSubmitting = ref(false);
 const isLocating = ref(false);
+const showSuccessToast = ref(false);
+const toastMessage = ref('');
+const toastColor = ref('success');
+const selectedSignalementId = ref<string | null>(null);
 
 let map: L.Map | null = null;
 const markersMap = new Map<string, L.Marker>();
@@ -565,20 +580,26 @@ const submitReport = async () => {
     const docRef = await addDoc(collection(db, 'signalements'), reportData);
     console.log('Signalement ajouté avec ID:', docRef.id);
 
-    // Reset form
+    // Reset form and close modal
+    const pointToReset = newSignalementPoint.value;
     newSignalementPoint.value = null;
     reportDescription.value = '';
     reportPhotos.value = [];
     selectedTypeId.value = null;
     
-    alert('Signalement envoyé avec succès !');
+    // Afficher toast et fermer
+    toastMessage.value = 'Signalement envoyé avec succès !';
+    toastColor.value = 'success';
+    showSuccessToast.value = true;
   } catch (err: any) {
     console.error('Erreur lors de l\'envoi:', err);
+    toastColor.value = 'danger';
     if (err.message?.includes('too large')) {
-      alert('Erreur : Le signalement est trop lourd. Essayez de mettre moins de photos ou des photos plus petites.');
+      toastMessage.value = 'Erreur : Le signalement est trop lourd.';
     } else {
-      alert('Erreur lors de l\'envoi du signalement : ' + err.message);
+      toastMessage.value = 'Erreur lors de l\'envoi du signalement';
     }
+    showSuccessToast.value = true;
   } finally {
     isSubmitting.value = false;
   }
@@ -665,6 +686,103 @@ const getStatusTextColor = (status: string) => {
   }
 };
 
+const getStatusColor = (status: string): string => {
+  const st = String(status || '').toLowerCase();
+  if (st.includes('nouveau')) return '#3b82f6';
+  if (st.includes('cours')) return '#f59e0b';
+  if (st.includes('termin')) return '#10b981';
+  return '#64748b';
+};
+
+const darkenColor = (color: string): string => {
+  return color === '#3b82f6' ? '#1d4ed8' : 
+         color === '#f59e0b' ? '#b45309' : 
+         color === '#10b981' ? '#047857' : '#334155';
+};
+
+const createCustomIcon = (s: any, isSelected: boolean = false): L.DivIcon => {
+  const status = String(s.statut || 'nouveau').toLowerCase();
+  const typeColor = s.type_couleur || getStatusColor(status);
+  let innerIcon = '';
+
+  // Utiliser l'icône du type si elle existe
+  if (s.type_icone_path) {
+    innerIcon = `
+      <g transform="translate(7.5, 5.5) scale(0.4)">
+        <path d="${s.type_icone_path}" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    `;
+  } else {
+    // Icône par défaut selon le statut
+    if (status.includes('nouveau')) {
+      innerIcon = `<g transform="translate(7.5, 5.5) scale(0.4)"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>`;
+    } else if (status.includes('cours')) {
+      innerIcon = `<g transform="translate(7.5, 5.5) scale(0.4)"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="12" cy="12" r="3" stroke="white" stroke-width="3" fill="none"/></g>`;
+    } else {
+      innerIcon = `<g transform="translate(7.5, 5.5) scale(0.4)"><path d="M5 13l4 4L19 7" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></g>`;
+    }
+  }
+
+  // Badge de statut
+  let badgeHtml = '';
+  let strokeColor = 'white';
+  let strokeWidth = '1.5';
+
+  if (status.includes('termin')) {
+    strokeColor = '#10b981';
+    strokeWidth = '2.5';
+    badgeHtml = `
+      <div class="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg z-10">
+        <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M5 13l4 4L19 7" />
+        </svg>
+      </div>
+    `;
+  } else if (status.includes('cours')) {
+    strokeColor = '#f59e0b';
+    strokeWidth = '2.5';
+    badgeHtml = `
+      <div class="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg z-10">
+        <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+        </svg>
+      </div>
+    `;
+  } else {
+    badgeHtml = `
+      <div class="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center shadow-lg z-10">
+        <div class="w-1 h-1 bg-white rounded-full"></div>
+      </div>
+    `;
+  }
+
+  return L.divIcon({
+    className: `custom-div-icon ${isSelected ? 'marker-selected' : ''}`,
+    html: `
+      <div class="marker-container relative flex items-center justify-center">
+        ${isSelected ? `<div class="ping-animation absolute w-10 h-10 rounded-full opacity-20 animate-ping" style="background-color: ${typeColor}"></div>` : ''}
+        ${badgeHtml}
+        <svg class="pin-svg relative w-8 h-8 drop-shadow-2xl transition-all duration-300" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="grad-${typeColor.replace('#','')}" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style="stop-color:${typeColor};stop-opacity:1" />
+              <stop offset="100%" style="stop-color:${darkenColor(typeColor)};stop-opacity:1" />
+            </linearGradient>
+          </defs>
+          <path d="M12 21C15.5 17.4 19 14.1764 19 10.2C19 6.22355 15.866 3 12 3C8.13401 3 5 6.22355 5 10.2C5 14.1764 8.5 17.4 12 21Z" 
+                fill="url(#grad-${typeColor.replace('#','')})" 
+                stroke="${strokeColor}" 
+                stroke-width="${strokeWidth}"/>
+          ${innerIcon}
+        </svg>
+      </div>
+    `,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
+    popupAnchor: [0, -32]
+  });
+};
+
 const formatDate = (dateString: string) => {
   if (!dateString) return '';
   try {
@@ -681,36 +799,79 @@ const updateMarkers = () => {
 
   filteredSignalements.value.forEach(s => {
     if (s.latitude && s.longitude) {
-      // Déterminer l'image à afficher (priorité à la galerie, puis photo_url)
-      let displayPhoto = '';
-      if (s.galerie && s.galerie.length > 0) {
-        displayPhoto = s.galerie[0].url;
-      } else if (s.photo_url) {
-        displayPhoto = s.photo_url;
-      }
-
-      const m = L.marker([s.latitude, s.longitude])
-        .addTo(map!)
-        .bindPopup(`
-          <div class="p-2 min-w-[160px]">
-            <div class="text-[10px] font-bold uppercase mb-1" style="color: ${getStatusTextColor(s.statut)}">${s.statut}</div>
-            ${displayPhoto ? `<div class="w-full h-24 rounded-lg overflow-hidden mb-2 bg-slate-100"><img src="${displayPhoto}" class="w-full h-full object-cover"></div>` : ''}
-            <div class="font-bold text-slate-800 text-sm mb-1">${s.description || 'Signalement'}</div>
-            ${s.entreprise ? `<div class="text-[9px] text-blue-600 font-bold italic mb-1">Entreprise: ${s.entreprise}</div>` : ''}
-            <div class="text-[10px] text-slate-400 mt-2 pt-2 border-t border-slate-50 flex justify-between">
-              <span>${formatDate(s.dateSignalement)}</span>
-              <span class="font-bold text-blue-600">${
-                (s.firebase_uid_utilisateur && s.firebase_uid_utilisateur === store.user?.firebaseUid) || 
-                (!s.firebase_uid_utilisateur && s.email === store.user?.email) 
-                ? 'Moi' : ''
-              }</span>
+      const m = L.marker([s.latitude, s.longitude], {
+        icon: createCustomIcon(s, selectedSignalementId.value === s.id)
+      })
+      .on('click', () => {
+        selectedSignalementId.value = s.id;
+        // Décaler légèrement vers le haut pour que la popup ne soit pas cachée par le header
+        const targetPoint = map!.project([s.latitude, s.longitude], 16);
+        targetPoint.y -= 150; // Décalage de 150 pixels vers le haut
+        const targetLatLng = map!.unproject(targetPoint, 16);
+        
+        map?.flyTo(targetLatLng, 16, { duration: 1 });
+      })
+      .addTo(map!)
+      .bindPopup(`
+        <div class="p-3 font-sans min-w-[220px] max-w-[280px]">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full" style="background-color: ${getStatusColor(s.statut)}"></div>
+              <p class="text-[10px] font-black text-slate-800 uppercase">${s.statut}</p>
             </div>
+            <span class="text-[9px] font-bold text-blue-600 uppercase tracking-tighter">${s.type_nom || ''}</span>
           </div>
-        `);
+          
+          <div class="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-3">
+            ${s.galerie && s.galerie.length > 0 
+              ? s.galerie.map((img: any) => `<img src="${img.url}" class="w-40 h-28 object-cover rounded-xl flex-shrink-0 shadow-sm border border-slate-100">`).join('')
+              : (s.photo_url ? `<img src="${s.photo_url}" class="w-full h-28 object-cover rounded-xl shadow-sm border border-slate-100">` : '<div class="w-full h-28 bg-slate-50 rounded-xl flex items-center justify-center text-slate-300 text-[10px] uppercase font-bold">Pas d\'image</div>')}
+          </div>
+
+          <div class="space-y-2">
+            <h3 class="font-bold text-slate-800 text-sm leading-tight">${s.description || 'Sans description'}</h3>
+            
+            <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-50">
+              ${s.surface_m2 ? `
+                <div class="flex flex-col">
+                  <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Surface</span>
+                  <span class="text-[11px] font-bold text-slate-700">${s.surface_m2} m²</span>
+                </div>
+              ` : ''}
+              ${s.budget ? `
+                <div class="flex flex-col">
+                  <span class="text-[8px] font-bold text-slate-400 uppercase tracking-wider">Budget</span>
+                  <span class="text-[11px] font-bold text-emerald-600">${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'MGA' }).format(s.budget)}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            ${s.entreprise_concerne || s.entreprise ? `
+              <div class="mt-2 p-2 bg-blue-50/50 rounded-lg border border-blue-100/50">
+                <span class="text-[8px] font-bold text-blue-400 uppercase tracking-wider block mb-0.5">Entreprise concernée</span>
+                <span class="text-[10px] font-bold text-blue-700">${s.entreprise_concerne || s.entreprise}</span>
+              </div>
+            ` : ''}
+          </div>
+          
+          <div class="flex justify-between items-center text-[9px] text-slate-400 mt-3 pt-2 border-t border-slate-50">
+            <div class="flex items-center gap-1">
+              <ion-icon :icon="locationOutline" class="text-[10px]" />
+              <span>${s.latitude.toFixed(4)}, ${s.longitude.toFixed(4)}</span>
+            </div>
+            <span>${formatDate(s.dateSignalement)}</span>
+          </div>
+        </div>
+      `, { className: 'custom-leaflet-popup', maxWidth: 300 });
+
       markersMap.set(s.id, m);
     }
   });
 };
+
+watch(() => selectedSignalementId.value, () => {
+  updateMarkers();
+});
 
 watch(() => store.signalements, () => {
   updateMarkers();

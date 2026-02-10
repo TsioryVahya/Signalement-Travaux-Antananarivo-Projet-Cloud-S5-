@@ -68,7 +68,14 @@ public class SignalementController {
             
             String entrepriseNom = data.get("entrepriseNom") != null ? (String) data.get("entrepriseNom") : (String) data.get("entreprise_nom");
             
-            List<String> photos = (List<String>) (data.get("photos") != null ? data.get("photos") : data.get("galerie"));
+            List<String> photos = null;
+            if (data.get("galerie") != null) {
+                photos = (List<String>) data.get("galerie");
+            } else if (data.get("photos") != null) {
+                photos = (List<String>) data.get("photos");
+            } else if (data.get("photoUrl") != null) {
+                photos = List.of((String) data.get("photoUrl"));
+            }
 
             Integer typeId = data.get("typeId") != null ? Integer.valueOf(data.get("typeId").toString()) : 
                              (data.get("id_type_signalement") != null ? Integer.valueOf(data.get("id_type_signalement").toString()) : null);
@@ -98,7 +105,14 @@ public class SignalementController {
             
             String entrepriseNom = data.get("entrepriseNom") != null ? (String) data.get("entrepriseNom") : (String) data.get("entreprise_nom");
             
-            List<String> photos = (List<String>) (data.get("photos") != null ? data.get("photos") : data.get("galerie"));
+            List<String> photos = null;
+            if (data.get("galerie") != null) {
+                photos = (List<String>) data.get("galerie");
+            } else if (data.get("photos") != null) {
+                photos = (List<String>) data.get("photos");
+            } else if (data.get("photoUrl") != null) {
+                photos = List.of((String) data.get("photoUrl"));
+            }
             
             Integer typeId = data.get("typeId") != null ? Integer.valueOf(data.get("typeId").toString()) : 
                              (data.get("id_type_signalement") != null ? Integer.valueOf(data.get("id_type_signalement").toString()) : null);

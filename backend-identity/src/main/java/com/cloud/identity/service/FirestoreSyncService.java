@@ -280,11 +280,6 @@ public class FirestoreSyncService {
                     }
                 }
 
-                // Support both camelCase and snake_case from Firestore
-                String photoUrl = document.getString("photoUrl");
-                if (photoUrl == null)
-                    photoUrl = document.getString("photo_url");
-
                 List<Map<String, Object>> galerieFirestore = (List<Map<String, Object>>) document.get("galerie");
                 if (galerieFirestore == null)
                     galerieFirestore = (List<Map<String, Object>>) document.get("photos");
@@ -401,20 +396,6 @@ public class FirestoreSyncService {
                         s.setGalerie(galerie);
                         details.setGalerie(galerie.get(0));
                     }
-                } else if (photoUrl != null && !photoUrl.isEmpty()) {
-                    // Fallback si seule photoUrl est présente
-                    com.cloud.identity.entities.GalerieSignalement g = new com.cloud.identity.entities.GalerieSignalement();
-                    g.setSignalement(s);
-                    g.setPhotoUrl(photoUrl);
-                    g.setDateAjout(java.time.Instant.now());
-                    
-                    s = signalementRepository.save(s);
-                    galerieRepository.save(g);
-                    
-                    List<com.cloud.identity.entities.GalerieSignalement> galerie = new java.util.ArrayList<>();
-                    galerie.add(g);
-                    s.setGalerie(galerie);
-                    details.setGalerie(g);
                 }
 
                 s.setDetails(details);
@@ -494,12 +475,7 @@ public class FirestoreSyncService {
                         photoMap.put("url", g.getPhotoUrl());
                         return photoMap;
                     }).collect(java.util.stream.Collectors.toList());
-                    data.put("photos", photosList);
                     data.put("galerie", photosList);
-                    
-                    // On garde photo_url pour la compatibilité avec le premier élément
-                    data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
-                    data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
                 }
             }
 
@@ -543,12 +519,7 @@ public class FirestoreSyncService {
                     photoMap.put("url", g.getPhotoUrl());
                     return photoMap;
                 }).collect(java.util.stream.Collectors.toList());
-                data.put("photos", photosList);
                 data.put("galerie", photosList);
-                
-                // On garde photo_url pour la compatibilité
-                data.put("photo_url", signalement.getGalerie().get(0).getPhotoUrl());
-                data.put("photoUrl", signalement.getGalerie().get(0).getPhotoUrl());
             }
 
             firestore.collection("signalements")

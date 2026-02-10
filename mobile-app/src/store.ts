@@ -14,7 +14,6 @@ export interface Signalement {
   budget?: number;
   entreprise_concerne?: string;
   entreprise?: string | null;
-  photo_url?: string;
   galerie?: Array<{url: string}>;
   
   [key: string]: any;

@@ -3,9 +3,6 @@ package com.cloud.identity.dto;
 import java.math.BigDecimal;
 
 public class SignalementDTO {
-    @com.google.cloud.firestore.annotation.PropertyName("photo_url")
-    private String photoUrl;
-
     private java.util.List<GalerieItemDTO> galerie;
 
     public static class GalerieItemDTO {
@@ -131,16 +128,6 @@ public class SignalementDTO {
 
     public void setBudget(BigDecimal budget) {
         this.budget = budget;
-    }
-
-    @com.google.cloud.firestore.annotation.PropertyName("photo_url")
-    public String getPhotoUrl() {
-        return photoUrl;
-    }
-
-    @com.google.cloud.firestore.annotation.PropertyName("photo_url")
-    public void setPhotoUrl(String photoUrl) {
-        this.photoUrl = photoUrl;
     }
 
     public java.util.List<GalerieItemDTO> getGalerie() {
