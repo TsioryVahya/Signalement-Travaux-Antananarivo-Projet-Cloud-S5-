@@ -143,8 +143,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description || '',
       budget: signalement.budget || 0,
       surfaceM2: signalement.surfaceM2 || 0,
-      entrepriseNom: signalement.entrepriseNom || ''
-      entrepriseConcerne: signalement.entrepriseConcerne || '',
+      entrepriseNom: signalement.entrepriseNom || '',
       dateModification: new Date().toISOString().slice(0, 16) // Format YYYY-MM-DDTHH:mm
     };
     this.showEditModal = true;
@@ -191,8 +190,7 @@ export class SignalementListComponent implements OnInit {
       description: signalement.description,
       budget: signalement.budget,
       surfaceM2: signalement.surfaceM2,
-      entrepriseNom: signalement.entrepriseNom
-      entrepriseConcerne: signalement.entrepriseConcerne,
+      entrepriseNom: signalement.entrepriseNom,
       // Par défaut, on prend "maintenant" pour le changement rapide
       dateModification: new Date().toISOString()
     };
