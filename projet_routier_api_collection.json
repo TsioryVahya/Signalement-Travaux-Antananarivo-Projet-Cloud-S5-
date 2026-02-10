@@ -1,0 +1,137 @@
+{
+	"info": {
+		"_postman_id": "e7569b7c-4130-4ad2-84a0-314e3b84d22b",
+		"name": "Firebase",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "51072076",
+		"_collection_link": "https://randrianjanaharyodilah-1784694.postman.co/workspace/Th%C3%A9o-Vandamme's-Workspace~667a4b8a-af24-4778-8834-d3b64a5a36ea/collection/51072076-e7569b7c-4130-4ad2-84a0-314e3b84d22b?action=share&source=collection_link&creator=51072076"
+	},
+	"item": [
+		{
+			"name": "signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"email\": \"test@gmail.com\",\r\n  \"password\": \"123456\",\r\n  \"returnSecureToken\": true\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s",
+					"protocol": "https",
+					"host": [
+						"identitytoolkit",
+						"googleapis",
+						"com"
+					],
+					"path": [
+						"v1",
+						"accounts:signUp"
+					],
+					"query": [
+						{
+							"key": "key",
+							"value": "AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"email\": \"test@gmail.com\",\r\n  \"password\": \"123456\",\r\n  \"returnSecureToken\": true\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s",
+					"protocol": "https",
+					"host": [
+						"identitytoolkit",
+						"googleapis",
+						"com"
+					],
+					"path": [
+						"v1",
+						"accounts:signInWithPassword"
+					],
+					"query": [
+						{
+							"key": "key",
+							"value": "AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "lookup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"idToken\": \"eyJhbGciOiJSUzI1NiIsImtpZCI6IjA4MmU5NzVlMDdkZmE0OTYwYzdiN2I0ZmMxZDEwZjkxNmRjMmY1NWIiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vYXV0aC1ub3RpZi0xZTAyMyIsImF1ZCI6ImF1dGgtbm90aWYtMWUwMjMiLCJhdXRoX3RpbWUiOjE3NjgyMzY0OTcsInVzZXJfaWQiOiIyVHN6enlONThjYWlxNU5vSjhWdzdrOWVHSGUyIiwic3ViIjoiMlRzenp5TjU4Y2FpcTVOb0o4Vnc3azllR0hlMiIsImlhdCI6MTc2ODIzNjQ5NywiZXhwIjoxNzY4MjQwMDk3LCJlbWFpbCI6InRlc3RAZ21haWwuY29tIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJmaXJlYmFzZSI6eyJpZGVudGl0aWVzIjp7ImVtYWlsIjpbInRlc3RAZ21haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.FrVyfoJj4UMpIqAchJ0SDWQ5dOy_2Wl0z1BxM_PLlZyXtUmR56H6W12vE4Z5CUTXjZeRgwvF6uSijiLyphRggkKlPqTFcBehEmntDHAjTfTJzl8coPtHmo6JidRFkVUz6SvYXWELzcyT4UwIR4o7X6EvJv5Mdd7j3L1EBcypKw-jAV19pOKXVVcZjrFdrpFW2AiBwlvyCol73K9ixi7WGfIs9xfhcKgoeCpVFYrlu928FKVM7SDPWdkXZqBKFn-ZD2E0nP66507xHjAvSkxrRnIJOGGBaTeIjfH1yf4qqCRbo0Aa6lOCDIzVqjxgfV7xeIlSVsHrmR9Ut14RK0uovw\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s",
+					"protocol": "https",
+					"host": [
+						"identitytoolkit",
+						"googleapis",
+						"com"
+					],
+					"path": [
+						"v1",
+						"accounts:lookup"
+					],
+					"query": [
+						{
+							"key": "key",
+							"value": "AIzaSyBr_GfVi-CgqEBhol9tkTWJeYr_9NtTU0s"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
